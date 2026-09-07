@@ -1,0 +1,61 @@
+# Compiled output — never commit build artifacts
+dist/
+build/
+out/
+lib/
+*.tsbuildinfo
+
+# Compiled JavaScript and type declarations emitted from TypeScript sources.
+# Genuine JS config files are re-included below.
+*.js
+*.cjs
+*.mjs
+*.js.map
+*.d.ts
+*.d.ts.map
+
+# ...except the checked-in tooling config, which is authored as JavaScript
+!jest.config.js
+!eslint.config.mjs
+!scripts/*.mjs
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+.yarn/
+package-lock.json.bak
+
+# Test and coverage artifacts
+coverage/
+.nyc_output/
+*.lcov
+junit.xml
+
+# Exported key material — never commit these
+*.lphe
+*_secret.json
+*_public.json
+
+# Packaged tarballs
+*.tgz
+
+# Logs and caches
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.eslintcache
+.cache/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editors and OS noise
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

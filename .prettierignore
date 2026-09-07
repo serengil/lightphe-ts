@@ -1,0 +1,9 @@
+dist/
+coverage/
+node_modules/
+package-lock.json
+
+# Generated curve tables: one very long line per curve, by design.
+src/ecc/curves/weierstrassData.ts
+src/ecc/curves/edwardsData.ts
+src/ecc/curves/koblitzData.ts

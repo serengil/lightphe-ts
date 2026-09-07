@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "Please cite the following publication if lightphe-ts helps your research."
+title: "lightphe-ts: A Lightweight Partially Homomorphic Encryption Library for TypeScript"
+authors:
+  - family-names: Serengil
+    given-names: Sefik Ilkin
+version: 0.0.1
+date-released: 2026-09-07
+doi: 10.3390/sym18050832
+url: https://github.com/serengil/lightphe-ts
+type: software
+preferred-citation:
+  type: article
+  title: "Sustainable Cryptography: Carbon Asymmetry in Partially Homomorphic Encryption in the Cloud"
+  authors:
+    - family-names: Ozpinar
+      given-names: Alper
+    - family-names: Serengil
+      given-names: Sefik Ilkin
+  year: 2026
+  doi: 10.3390/sym18050832
+  url: https://www.mdpi.com/2073-8994/18/5/832
+  journal: "Symmetry"
+  volume: 18
+  issue: 5
+  start: 832
+  end: null
+  publisher: "mdpi"
