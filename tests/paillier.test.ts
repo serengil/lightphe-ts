@@ -29,6 +29,12 @@ describe('Paillier', () => {
     // unsupported homomorphic operations
     expect(() => c1.multiply(c2)).toThrow();
     expect(() => c1.xor(c2)).toThrow();
+    expect(() => cs.encryptDecisionTreeInput([1], 1)).toThrow(
+      'does not support evaluating decision trees'
+    );
+    expect(() =>
+      cs.evaluateDecisionTree([0, 0, 1], [[c1.value as bigint]])
+    ).toThrow('does not support evaluating decision trees');
 
     logger.info('✅ Paillier api test succeeded');
   });
