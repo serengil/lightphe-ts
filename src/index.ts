@@ -13,23 +13,25 @@ import { Logger } from './commons/logger.js';
 import { mod, ZERO } from './commons/mathUtils.js';
 import { fractionize, normalizeInput } from './commons/pheUtils.js';
 import { buildCryptosystem, type BuildOptions } from './cryptosystems/index.js';
+import { FLOAT_NOT_SUPPORTED_MSG } from './cryptosystems/JoyeLibert.js';
 import type { CurveForm } from './ecc/index.js';
-import type { AlgorithmName } from './models/Algorithm.js';
+import { Algorithm, type AlgorithmName } from './models/Algorithm.js';
 import { Ciphertext } from './models/Ciphertext.js';
 import { Homomorphic } from './models/Homomorphic.js';
 import { EncryptedTensor, Fraction } from './models/Tensor.js';
-import type { CiphertextValue, Keys } from './models/types.js';
+import type { CiphertextValue, DecisionTree, Keys } from './models/types.js';
 
 const logger = new Logger('lightphe-ts/index.ts');
 
 /** The version of this package. */
-export const VERSION = '0.0.1';
+export const VERSION = '0.0.2';
 
 /** Options accepted by the `LightPHE` constructor. */
 export interface LightPHEOptions {
   /** RSA | ElGamal | Exponential-ElGamal | EllipticCurve-ElGamal | Paillier |
    * Damgard-Jurik | Okamoto-Uchiyama | Benaloh | Naccache-Stern |
-   * Goldwasser-Micali | Sander-Young-Yung | Boneh-Goh-Nissim */
+   * Goldwasser-Micali | Sander-Young-Yung | Boneh-Goh-Nissim | Joye-Libert |
+   * Castagnos-Laguillaumie | Ishai-Paskin */
   algorithmName: AlgorithmName | string;
 
   /** An existing private/public key pair to use instead of generating one. */
@@ -67,8 +69,9 @@ export interface LightPHEOptions {
 
   /**
    * Maximum attempts to generate keys, 10000 by default. RSA, Benaloh,
-   * Naccache-Stern and Goldwasser-Micali may need several attempts; other
-   * algorithms ignore this.
+   * Naccache-Stern, Goldwasser-Micali, Boneh-Goh-Nissim, Joye-Libert and
+   * Castagnos-Laguillaumie may need several attempts; other algorithms ignore
+   * this.
    */
   maxTries?: number;
 }
@@ -136,6 +139,14 @@ export class LightPHE {
 
     if (Array.isArray(plaintext)) {
       return this.encryptTensor(plaintext, options?.silent ?? false);
+    }
+
+    if (
+      typeof plaintext === 'number' &&
+      !Number.isInteger(plaintext) &&
+      this.algorithmName === Algorithm.JoyeLibert
+    ) {
+      throw new Error(FLOAT_NOT_SUPPORTED_MSG);
     }
 
     const ciphertext = this.cs.encrypt(
@@ -216,6 +227,53 @@ export class LightPHE {
       const divisor = this.cs.decrypt(c.divisor);
 
       return (c.sign * Number(absDividend)) / Number(divisor);
+    });
+  }
+
+  /**
+   * Encrypts the input bits (answers to the questions) of a decision tree.
+   * Only supported by Ishai-Paskin.
+   *
+   * @param bits - input bits x_0, x_1, ... each 0 or 1.
+   * @param depth - maximum number of decisions on a path of the decision tree.
+   * @returns the encrypted input, to be sent to the tree owner.
+   */
+  encryptDecisionTreeInput(bits: readonly number[], depth: number): bigint[][] {
+    if (this.cs.keys.public_key == null) {
+      throw new Error('You must have public key to perform encryption');
+    }
+
+    return this.cs.encryptDecisionTreeInput(bits, depth);
+  }
+
+  /**
+   * Evaluates a decision tree on encrypted input. Private key is not required.
+   * Only supported by Ishai-Paskin.
+   *
+   * @param tree - leaf (integer) or decision node `[variableIndex, treeIf0,
+   *   treeIf1]`.
+   * @param encryptedInput - output of {@link encryptDecisionTreeInput}.
+   * @returns the encrypted output of the tree.
+   */
+  evaluateDecisionTree(
+    tree: DecisionTree,
+    encryptedInput: readonly (readonly bigint[])[]
+  ): Ciphertext {
+    if (this.cs.keys.public_key == null) {
+      throw new Error(
+        'You must have public key to perform decision tree evaluation'
+      );
+    }
+
+    const output = this.cs.evaluateDecisionTree(tree, encryptedInput);
+
+    const publicKeys: Keys = { ...this.cs.keys };
+    delete publicKeys.private_key;
+
+    return new Ciphertext({
+      algorithmName: this.algorithmName,
+      keys: publicKeys,
+      value: output,
     });
   }
 
@@ -401,6 +459,7 @@ export { EncryptedTensor, Fraction } from './models/Tensor.js';
 export { Homomorphic } from './models/Homomorphic.js';
 export type {
   CiphertextValue,
+  DecisionTree,
   Keys,
   KeyPart,
   RequiredKeys,
@@ -425,8 +484,15 @@ export {
   EllipticCurveElGamal,
   SanderYoungYung,
   BonehGohNissim,
+  JoyeLibert,
+  CastagnosLaguillaumie,
+  IshaiPaskin,
+  FLOAT_NOT_SUPPORTED_MSG,
+  DECISION_TREE_OUTPUT_NOT_SUPPORTED_MSG,
   type ECPair,
   type BGNValue,
+  type CLPair,
+  type Form,
 } from './cryptosystems/index.js';
 export {
   LightECC,

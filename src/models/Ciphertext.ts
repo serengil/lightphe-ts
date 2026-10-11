@@ -2,8 +2,9 @@
 
 import { normalizeInput } from '../commons/pheUtils.js';
 import { buildCryptosystem } from '../cryptosystems/index.js';
+import { FLOAT_NOT_SUPPORTED_MSG } from '../cryptosystems/JoyeLibert.js';
 import type { CurveForm } from '../ecc/index.js';
-import type { AlgorithmName } from './Algorithm.js';
+import { Algorithm, type AlgorithmName } from './Algorithm.js';
 import { Homomorphic } from './Homomorphic.js';
 import type { CiphertextValue, Keys } from './types.js';
 
@@ -80,6 +81,9 @@ export class Ciphertext {
       );
     }
     if (typeof other === 'number') {
+      if (this.algorithmName === Algorithm.JoyeLibert) {
+        throw new Error(FLOAT_NOT_SUPPORTED_MSG);
+      }
       const constant = normalizeInput(other, this.cs.plaintextModulo);
       return this.wrap(this.cs.multiplyByConstant(this.value, constant));
     }

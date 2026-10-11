@@ -2,7 +2,8 @@
 
 import { Logger } from '../commons/logger.js';
 import { fractionize, normalizeInput } from '../commons/pheUtils.js';
-import type { AlgorithmName } from './Algorithm.js';
+import { FLOAT_NOT_SUPPORTED_MSG } from '../cryptosystems/JoyeLibert.js';
+import { Algorithm, type AlgorithmName } from './Algorithm.js';
 import { Ciphertext } from './Ciphertext.js';
 import { Homomorphic } from './Homomorphic.js';
 import type { CiphertextValue } from './types.js';
@@ -214,6 +215,13 @@ export class EncryptedTensor {
     }
 
     if (typeof other === 'bigint' || typeof other === 'number') {
+      if (
+        typeof other === 'number' &&
+        !Number.isInteger(other) &&
+        this.cs.getAlgorithmName() === Algorithm.JoyeLibert
+      ) {
+        throw new Error(FLOAT_NOT_SUPPORTED_MSG);
+      }
       const constantSign = other >= 0 ? 1 : -1;
       const magnitude = other < 0 ? -other : other;
       const constant =

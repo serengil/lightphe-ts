@@ -23,7 +23,8 @@
 [`Naccache–Stern`](https://sefiks.com/2023/10/26/a-step-by-step-partially-homomorphic-encryption-example-with-naccache-stern-in-python/),
 [`Goldwasser–Micali`](https://sefiks.com/2023/10/27/a-step-by-step-partially-homomorphic-encryption-example-with-goldwasser-micali-in-python/),
 [`Sander-Young-Yung`](https://sefiks.com/2026/04/02/a-step-by-step-partially-homomorphic-sander-young-yung-example-in-python/),
-[`Boneh-Goh-Nissim`](https://sefiks.com/2026/04/02/a-step-by-step-somewhat-homomorphic-encryption-example-with-boneh-goh-nissim-in-python/).
+[`Boneh-Goh-Nissim`](https://sefiks.com/2026/04/02/a-step-by-step-somewhat-homomorphic-encryption-example-with-boneh-goh-nissim-in-python/),
+`Joye-Libert`, `Castagnos-Laguillaumie`, `Ishai-Paskin`.
 
 It is a TypeScript port of [LightPHE](https://github.com/serengil/LightPHE), with the elliptic curve arithmetic of [LightECC](https://github.com/serengil/LightECC) folded in. It has **no runtime dependencies** — every large integer is a native `bigint`, and randomness comes from the platform CSPRNG.
 
@@ -78,20 +79,23 @@ Plaintexts and constants can be passed as either a `number` or a `bigint` — wh
 
 In summary, `lightphe-ts` covers the following algorithms, and these are partially homomorphic and somewhat homomorphic with respect to the operations mentioned in the following table.
 
-| Algorithm              | Multiplicatively<br>Homomorphic | Additively<br>Homomorphic | Scalar Multiplication | Bitwise-XOR Homomorphic | Bitwise-AND Homomorphic | Regeneration<br>of Ciphertext |
-| ---------------------- | ------------------------------- | ------------------------- | --------------------- | ----------------------- | ----------------------- | ----------------------------- |
-| RSA                    | ✅                              | ❌                        | ❌                    | ❌                      | ❌                      | ❌                            |
-| ElGamal                | ✅                              | ❌                        | ❌                    | ❌                      | ❌                      | ✅                            |
-| Exponential ElGamal    | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            |
-| Elliptic Curve ElGamal | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            |
-| Paillier               | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            |
-| Damgard-Jurik          | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            |
-| Benaloh                | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            |
-| Naccache-Stern         | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            |
-| Okamoto-Uchiyama       | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            |
-| Goldwasser-Micali      | ❌                              | ❌                        | ❌                    | ✅                      | ❌                      | ✅                            |
-| Sander-Young-Yung      | ❌                              | ❌                        | ❌                    | ❌                      | ✅                      | ✅                            |
-| Boneh-Goh-Nissim       | 1️⃣                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            |
+| Algorithm              | Multiplicatively<br>Homomorphic | Additively<br>Homomorphic | Scalar Multiplication | Bitwise-XOR Homomorphic | Bitwise-AND Homomorphic | Regeneration<br>of Ciphertext | Decision Tree<br>Evaluation |
+| ---------------------- | ------------------------------- | ------------------------- | --------------------- | ----------------------- | ----------------------- | ----------------------------- | --------------------------- |
+| RSA                    | ✅                              | ❌                        | ❌                    | ❌                      | ❌                      | ❌                            | ❌                          |
+| ElGamal                | ✅                              | ❌                        | ❌                    | ❌                      | ❌                      | ✅                            | ❌                          |
+| Exponential ElGamal    | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          |
+| Elliptic Curve ElGamal | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          |
+| Paillier               | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          |
+| Damgard-Jurik          | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          |
+| Benaloh                | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          |
+| Naccache-Stern         | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          |
+| Okamoto-Uchiyama       | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          |
+| Joye-Libert            | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          |
+| Castagnos-Laguillaumie | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          |
+| Ishai-Paskin           | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ✅                          |
+| Goldwasser-Micali      | ❌                              | ❌                        | ❌                    | ✅                      | ❌                      | ✅                            | ❌                          |
+| Sander-Young-Yung      | ❌                              | ❌                        | ❌                    | ❌                      | ✅                      | ✅                            | ❌                          |
+| Boneh-Goh-Nissim       | 1️⃣                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          |
 
 # Building a cryptosystem
 
@@ -113,6 +117,9 @@ const algorithms = [
   'EllipticCurve-ElGamal',
   'Sander-Young-Yung',
   'Boneh-Goh-Nissim',
+  'Joye-Libert',
+  'Castagnos-Laguillaumie',
+  'Ishai-Paskin',
 ];
 
 const cs = new LightPHE({ algorithmName: algorithms[0] });
@@ -233,6 +240,64 @@ console.log(listCurveNames('edwards')); // ['curve41417', 'e222', ...]
 
 See the [`curves`](https://github.com/serengil/LightECC#supported-curves) page for details on all supported forms and curves.
 
+### Decision Trees
+
+Ishai-Paskin solves a different problem than the algorithms above. Suppose a bank has a secret decision tree that decides a customer's credit limit, and a customer has private yes / no answers. The bank does not want to reveal its tree, and the customer does not want to reveal their answers. With Ishai-Paskin, the customer sends encrypted answers, the bank runs its tree on them without seeing them, and only the customer can decrypt the result. The customer learns the credit limit but not the rest of the tree.
+
+Let the bank's tree be the following, where questions are numbered 0, 1 and 2 and leaves are credit limits in thousand dollars.
+
+```
+                  Q0: has stable income?
+                 /no                    \yes
+     Q2: owns a house?              Q1: has existing debt?
+       /no        \yes               /no           \yes
+      0            5               20         Q2: owns a house?
+                                                /no       \yes
+                                               5          10
+```
+
+Each question is written as an array of `[question number, what to do if no, what to do if yes]`, and leaves are plain integers. So, the tree above becomes:
+
+```typescript
+import { LightPHE, type DecisionTree } from 'lightphe-ts';
+
+const creditLimitTree: DecisionTree = [0, [2, 0, 5], [1, 20, [2, 5, 10]]];
+```
+
+Then, the customer and the bank run the following steps.
+
+```typescript
+// customer builds the cryptosystem and keeps the private key
+const customerCs = new LightPHE({ algorithmName: 'Ishai-Paskin' });
+
+// customer shares only the public key with the bank
+customerCs.exportKeys('public.txt', true);
+
+// customer's answers: stable income = yes, existing debt = yes, owns a house = no
+const answers = [1, 1, 0];
+
+// customer encrypts the answers and sends them to the bank. depth is the maximum
+// number of questions on a path of the tree, the bank should share this value
+const encryptedAnswers = customerCs.encryptDecisionTreeInput(answers, 3);
+
+// bank builds its own cryptosystem with the customer's public key
+const bankCs = new LightPHE({
+  algorithmName: 'Ishai-Paskin',
+  keyFile: 'public.txt',
+});
+
+// bank runs its tree on encrypted answers and sends the result back to the customer
+const encryptedLimit = bankCs.evaluateDecisionTree(
+  creditLimitTree,
+  encryptedAnswers
+);
+
+// customer decrypts the result - only the customer has the private key
+console.assert(customerCs.decrypt(encryptedLimit) === 5n);
+```
+
+The size of the result grows with the depth of the tree, not with the number of its nodes. Still, each extra level makes the computation noticeably slower, so this is practical for shallow trees.
+
 ### Vector Embeddings
 
 Homomorphic encryption is supported on vector embeddings too. This is useful in privacy-preserving machine learning, secure aggregation, and confidential data processing.
@@ -339,12 +404,12 @@ const rebuilt = cs.createCiphertextObj(payload);
 
 `LightPHE` is available across multiple programming languages with consistent APIs and native performance for each ecosystem. Choose the port that fits your stack:
 
-| Language | Repository | Ecosystem Focus |
-| :--- | :--- | :--- |
-| **Python** | [`lightphe`](https://github.com/serengil/lightphe) | AI, Research & Prototyping |
-| **Go** | [`lightphe-go`](https://github.com/serengil/lightphe-go) | Cloud-Native & High-Throughput Microservices |
-| **Java** | [`lightphe4j`](https://github.com/serengil/lightphe4j) | Enterprise, Banking & Legacy Systems |
-| **TypeScript** | [`lightphe-ts`](https://github.com/serengil/lightphe-ts) | Client-Side Privacy & Node.js Backend |
+| Language       | Repository                                               | Ecosystem Focus                              |
+| :------------- | :------------------------------------------------------- | :------------------------------------------- |
+| **Python**     | [`lightphe`](https://github.com/serengil/lightphe)       | AI, Research & Prototyping                   |
+| **Go**         | [`lightphe-go`](https://github.com/serengil/lightphe-go) | Cloud-Native & High-Throughput Microservices |
+| **Java**       | [`lightphe4j`](https://github.com/serengil/lightphe4j)   | Enterprise, Banking & Legacy Systems         |
+| **TypeScript** | [`lightphe-ts`](https://github.com/serengil/lightphe-ts) | Client-Side Privacy & Node.js Backend        |
 
 # Support
 

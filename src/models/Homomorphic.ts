@@ -1,6 +1,11 @@
 /** The signature every LightPHE cryptosystem implements. */
 
-import type { CiphertextValue, Keys, RequiredKeys } from './types.js';
+import type {
+  CiphertextValue,
+  DecisionTree,
+  Keys,
+  RequiredKeys,
+} from './types.js';
 
 export abstract class Homomorphic {
   /** The private/public key pair this cryptosystem was built with. */
@@ -83,6 +88,26 @@ export abstract class Homomorphic {
   ): CiphertextValue {
     throw new Error(
       `${this.getAlgorithmName()} is not supporting multiplying ciphertext by a known constant`
+    );
+  }
+
+  /** Encrypts the input bits of a decision tree. */
+  encryptDecisionTreeInput(
+    _bits: readonly number[],
+    _depth: number
+  ): bigint[][] {
+    throw new Error(
+      `${this.getAlgorithmName()} does not support evaluating decision trees`
+    );
+  }
+
+  /** Evaluates a decision tree on encrypted input bits. */
+  evaluateDecisionTree(
+    _tree: DecisionTree,
+    _encryptedInput: readonly (readonly bigint[])[]
+  ): CiphertextValue {
+    throw new Error(
+      `${this.getAlgorithmName()} does not support evaluating decision trees`
     );
   }
 

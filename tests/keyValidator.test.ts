@@ -16,6 +16,9 @@ const ALGORITHMS: Array<[string, number]> = [
   ['Goldwasser-Micali', 50],
   ['Sander-Young-Yung', 50],
   ['Boneh-Goh-Nissim', 50],
+  ['Joye-Libert', 50],
+  ['Castagnos-Laguillaumie', 50],
+  ['Ishai-Paskin', 50],
 ];
 
 describe('key validator', () => {

@@ -6,10 +6,13 @@ import type { Homomorphic } from '../models/Homomorphic.js';
 import type { Keys, RequiredKeys } from '../models/types.js';
 import { Benaloh } from './Benaloh.js';
 import { BonehGohNissim } from './BonehGohNissim.js';
+import { CastagnosLaguillaumie } from './CastagnosLaguillaumie.js';
 import { DamgardJurik } from './DamgardJurik.js';
 import { ElGamal } from './ElGamal.js';
 import { EllipticCurveElGamal } from './EllipticCurveElGamal.js';
 import { GoldwasserMicali } from './GoldwasserMicali.js';
+import { IshaiPaskin } from './IshaiPaskin.js';
+import { JoyeLibert } from './JoyeLibert.js';
 import { NaccacheStern } from './NaccacheStern.js';
 import { OkamotoUchiyama } from './OkamotoUchiyama.js';
 import { Paillier } from './Paillier.js';
@@ -18,10 +21,20 @@ import { SanderYoungYung } from './SanderYoungYung.js';
 
 export { Benaloh } from './Benaloh.js';
 export { BonehGohNissim, type BGNValue } from './BonehGohNissim.js';
+export {
+  CastagnosLaguillaumie,
+  type CLPair,
+  type Form,
+} from './CastagnosLaguillaumie.js';
 export { DamgardJurik } from './DamgardJurik.js';
 export { ElGamal } from './ElGamal.js';
 export { EllipticCurveElGamal, type ECPair } from './EllipticCurveElGamal.js';
 export { GoldwasserMicali } from './GoldwasserMicali.js';
+export {
+  IshaiPaskin,
+  DECISION_TREE_OUTPUT_NOT_SUPPORTED_MSG,
+} from './IshaiPaskin.js';
+export { JoyeLibert, FLOAT_NOT_SUPPORTED_MSG } from './JoyeLibert.js';
 export { NaccacheStern } from './NaccacheStern.js';
 export { OkamotoUchiyama } from './OkamotoUchiyama.js';
 export { Paillier } from './Paillier.js';
@@ -58,6 +71,9 @@ export const REQUIRED_KEYS_BY_ALGORITHM: Readonly<
   [Algorithm.GoldwasserMicali]: GoldwasserMicali.REQUIRED_KEYS,
   [Algorithm.SanderYoungYung]: SanderYoungYung.REQUIRED_KEYS,
   [Algorithm.BonehGohNissim]: BonehGohNissim.REQUIRED_KEYS,
+  [Algorithm.JoyeLibert]: JoyeLibert.REQUIRED_KEYS,
+  [Algorithm.CastagnosLaguillaumie]: CastagnosLaguillaumie.REQUIRED_KEYS,
+  [Algorithm.IshaiPaskin]: IshaiPaskin.REQUIRED_KEYS,
 };
 
 /**
@@ -98,6 +114,12 @@ export function buildCryptosystem(
       return new SanderYoungYung({ keys, keySize, plaintextLimit });
     case Algorithm.BonehGohNissim:
       return new BonehGohNissim({ keys, keySize, maxTries });
+    case Algorithm.JoyeLibert:
+      return new JoyeLibert({ keys, keySize, maxTries });
+    case Algorithm.CastagnosLaguillaumie:
+      return new CastagnosLaguillaumie({ keys, keySize, maxTries });
+    case Algorithm.IshaiPaskin:
+      return new IshaiPaskin({ keys, keySize });
     default:
       throw new Error(`unimplemented algorithm - ${algorithmName}`);
   }

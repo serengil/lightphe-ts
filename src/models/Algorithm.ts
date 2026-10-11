@@ -12,6 +12,9 @@ export const Algorithm = {
   GoldwasserMicali: 'Goldwasser-Micali',
   SanderYoungYung: 'Sander-Young-Yung',
   BonehGohNissim: 'Boneh-Goh-Nissim',
+  JoyeLibert: 'Joye-Libert',
+  CastagnosLaguillaumie: 'Castagnos-Laguillaumie',
+  IshaiPaskin: 'Ishai-Paskin',
 } as const;
 
 /** The name of any algorithm LightPHE can build a cryptosystem for. */

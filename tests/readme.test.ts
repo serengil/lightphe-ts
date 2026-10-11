@@ -6,11 +6,16 @@
  * smaller key size, so the suite stays quick.
  */
 
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+
 import LightPHEDefault, {
   FORMS,
   LightPHE,
   getDefaultCurve,
   listCurveNames,
+  type DecisionTree,
 } from '../src';
 
 describe('README examples', () => {
@@ -28,6 +33,9 @@ describe('README examples', () => {
       'EllipticCurve-ElGamal',
       'Sander-Young-Yung',
       'Boneh-Goh-Nissim',
+      'Joye-Libert',
+      'Castagnos-Laguillaumie',
+      'Ishai-Paskin',
     ];
 
     for (const algorithmName of algorithms) {
@@ -139,6 +147,35 @@ describe('README examples', () => {
     expect(
       Math.abs(cs.decrypt(c7)[0] - t1.reduce((s, a, i) => s + a * t3[i], 0))
     ).toBeLessThan(0.1);
+  });
+
+  it('runs the decision tree walkthrough', () => {
+    const creditLimitTree: DecisionTree = [0, [2, 0, 5], [1, 20, [2, 5, 10]]];
+
+    const customerCs = new LightPHE({
+      algorithmName: 'Ishai-Paskin',
+      keySize: 50,
+    });
+
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lightphe-ts-'));
+    const publicKeyFile = path.join(dir, 'public.txt');
+    customerCs.exportKeys(publicKeyFile, true);
+
+    const answers = [1, 1, 0];
+    const encryptedAnswers = customerCs.encryptDecisionTreeInput(answers, 3);
+
+    const bankCs = new LightPHE({
+      algorithmName: 'Ishai-Paskin',
+      keyFile: publicKeyFile,
+    });
+
+    const encryptedLimit = bankCs.evaluateDecisionTree(
+      creditLimitTree,
+      encryptedAnswers
+    );
+
+    expect(customerCs.decrypt(encryptedLimit)).toBe(5n);
+    fs.rmSync(dir, { recursive: true, force: true });
   });
 
   it('hands a public key to a cloud that cannot decrypt', () => {

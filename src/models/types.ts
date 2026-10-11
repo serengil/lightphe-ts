@@ -14,6 +14,14 @@ import type { EllipticCurvePoint } from '../ecc/point.js';
 export type CiphertextValue =
   bigint | EllipticCurvePoint | FP2 | readonly CiphertextValue[];
 
+/**
+ * A decision tree: either an integer leaf, or a decision node
+ * `[variableIndex, treeIf0, treeIf1]` that continues with `treeIf0` when the
+ * input bit at `variableIndex` is 0, and with `treeIf1` when it is 1.
+ */
+export type DecisionTree =
+  number | bigint | readonly [number, DecisionTree, DecisionTree];
+
 /** One half of a key pair: a bag of named big integers (or nested structures). */
 export type KeyPart = Record<string, unknown>;
 
