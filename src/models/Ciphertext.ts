@@ -2,11 +2,24 @@
 
 import { normalizeInput } from '../commons/pheUtils.js';
 import { buildCryptosystem } from '../cryptosystems/index.js';
+import { BV_FLOAT_NOT_SUPPORTED_MSG } from '../cryptosystems/BrakerskiVaikuntanathan.js';
+import { FBGN_FLOAT_NOT_SUPPORTED_MSG } from '../cryptosystems/FreemanBonehGohNissim.js';
+import { GHV_FLOAT_NOT_SUPPORTED_MSG } from '../cryptosystems/GentryHaleviVaikuntanathan.js';
 import { FLOAT_NOT_SUPPORTED_MSG } from '../cryptosystems/JoyeLibert.js';
+import { REGEV_FLOAT_NOT_SUPPORTED_MSG } from '../cryptosystems/Regev.js';
 import type { CurveForm } from '../ecc/index.js';
 import { Algorithm, type AlgorithmName } from './Algorithm.js';
 import { Homomorphic } from './Homomorphic.js';
 import type { CiphertextValue, Keys } from './types.js';
+
+/** Algorithms rejecting floats, as their plaintext spaces cannot hold scaled values. */
+export const FLOAT_NOT_SUPPORTED_MESSAGES: Readonly<Record<string, string>> = {
+  [Algorithm.JoyeLibert]: FLOAT_NOT_SUPPORTED_MSG,
+  [Algorithm.Regev]: REGEV_FLOAT_NOT_SUPPORTED_MSG,
+  [Algorithm.BrakerskiVaikuntanathan]: BV_FLOAT_NOT_SUPPORTED_MSG,
+  [Algorithm.FreemanBonehGohNissim]: FBGN_FLOAT_NOT_SUPPORTED_MSG,
+  [Algorithm.GentryHaleviVaikuntanathan]: GHV_FLOAT_NOT_SUPPORTED_MSG,
+};
 
 export class Ciphertext {
   readonly algorithmName: AlgorithmName | string;
@@ -81,8 +94,10 @@ export class Ciphertext {
       );
     }
     if (typeof other === 'number') {
-      if (this.algorithmName === Algorithm.JoyeLibert) {
-        throw new Error(FLOAT_NOT_SUPPORTED_MSG);
+      const floatNotSupported =
+        FLOAT_NOT_SUPPORTED_MESSAGES[this.algorithmName];
+      if (floatNotSupported !== undefined) {
+        throw new Error(floatNotSupported);
       }
       const constant = normalizeInput(other, this.cs.plaintextModulo);
       return this.wrap(this.cs.multiplyByConstant(this.value, constant));

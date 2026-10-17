@@ -19,6 +19,14 @@ const ALGORITHMS: Array<[string, number]> = [
   ['Joye-Libert', 50],
   ['Castagnos-Laguillaumie', 50],
   ['Ishai-Paskin', 50],
+  ['Damgard-Geisler-Kroigaard', 50],
+  ['Bresson-Catalano-Pointcheval', 50],
+  ['Camenisch-Shoup', 50],
+  ['EllipticCurve-Paillier', 50],
+  ['Regev', 50],
+  ['Brakerski-Vaikuntanathan', 64],
+  ['Freeman-Boneh-Goh-Nissim', 64],
+  ['Gentry-Halevi-Vaikuntanathan', 2],
 ];
 
 describe('key validator', () => {
@@ -43,10 +51,15 @@ describe('key validator', () => {
     '%s rejects a missing private_key field',
     (algorithmName, keySize) => {
       const cs = new LightPHE({ algorithmName, keySize, maxTries: 10000 });
-      const field = cs.cs.requiredKeys.private_key[0];
+      const required = cs.cs.requiredKeys.private_key;
+      const field = required[0];
 
+      // keep required fields only, otherwise alternative fields may satisfy validation
       const broken = deepClone(cs.cs.keys) as Keys;
-      delete broken.private_key![field];
+      broken.private_key = Object.fromEntries(
+        required.map((f) => [f, broken.private_key![f]])
+      );
+      delete broken.private_key[field];
 
       expect(() => new LightPHE({ algorithmName, keys: broken })).toThrow(
         new RegExp(`missing required fields.*${field}`)
@@ -111,5 +124,33 @@ describe('key validator', () => {
     );
 
     logger.info(`✅ BGN: missing public_key.curve.${field} rejected`);
+  });
+
+  it('accepts an alternative private key', () => {
+    // Bresson-Catalano-Pointcheval accepts a private key having the master trapdoor only
+    const cs = new LightPHE({
+      algorithmName: 'Bresson-Catalano-Pointcheval',
+      keySize: 50,
+    });
+    const masterOnly = deepClone(cs.cs.keys) as Keys;
+    delete masterOnly.private_key!.a;
+    // should not throw
+    expect(
+      () =>
+        new LightPHE({
+          algorithmName: 'Bresson-Catalano-Pointcheval',
+          keys: masterOnly,
+        })
+    ).not.toThrow();
+
+    // neither the required nor the alternative fields
+    delete masterOnly.private_key!.q;
+    expect(
+      () =>
+        new LightPHE({
+          algorithmName: 'Bresson-Catalano-Pointcheval',
+          keys: masterOnly,
+        })
+    ).toThrow(/missing required fields.*a.*alternatively/);
   });
 });

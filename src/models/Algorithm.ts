@@ -15,6 +15,14 @@ export const Algorithm = {
   JoyeLibert: 'Joye-Libert',
   CastagnosLaguillaumie: 'Castagnos-Laguillaumie',
   IshaiPaskin: 'Ishai-Paskin',
+  DamgardGeislerKroigaard: 'Damgard-Geisler-Kroigaard',
+  BressonCatalanoPointcheval: 'Bresson-Catalano-Pointcheval',
+  CamenischShoup: 'Camenisch-Shoup',
+  EllipticCurvePaillier: 'EllipticCurve-Paillier',
+  Regev: 'Regev',
+  BrakerskiVaikuntanathan: 'Brakerski-Vaikuntanathan',
+  FreemanBonehGohNissim: 'Freeman-Boneh-Goh-Nissim',
+  GentryHaleviVaikuntanathan: 'Gentry-Halevi-Vaikuntanathan',
 } as const;
 
 /** The name of any algorithm LightPHE can build a cryptosystem for. */

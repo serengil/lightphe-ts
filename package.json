@@ -1,6 +1,6 @@
 {
   "name": "lightphe-ts",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A Lightweight Partially Homomorphic Encryption Library for TypeScript and JavaScript",
   "author": "Sefik Serengil",
   "license": "MIT",

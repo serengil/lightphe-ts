@@ -6,16 +6,24 @@ import type { Homomorphic } from '../models/Homomorphic.js';
 import type { Keys, RequiredKeys } from '../models/types.js';
 import { Benaloh } from './Benaloh.js';
 import { BonehGohNissim } from './BonehGohNissim.js';
+import { BrakerskiVaikuntanathan } from './BrakerskiVaikuntanathan.js';
+import { BressonCatalanoPointcheval } from './BressonCatalanoPointcheval.js';
+import { CamenischShoup } from './CamenischShoup.js';
 import { CastagnosLaguillaumie } from './CastagnosLaguillaumie.js';
+import { DamgardGeislerKroigaard } from './DamgardGeislerKroigaard.js';
 import { DamgardJurik } from './DamgardJurik.js';
 import { ElGamal } from './ElGamal.js';
 import { EllipticCurveElGamal } from './EllipticCurveElGamal.js';
+import { EllipticCurvePaillier } from './EllipticCurvePaillier.js';
+import { FreemanBonehGohNissim } from './FreemanBonehGohNissim.js';
+import { GentryHaleviVaikuntanathan } from './GentryHaleviVaikuntanathan.js';
 import { GoldwasserMicali } from './GoldwasserMicali.js';
 import { IshaiPaskin } from './IshaiPaskin.js';
 import { JoyeLibert } from './JoyeLibert.js';
 import { NaccacheStern } from './NaccacheStern.js';
 import { OkamotoUchiyama } from './OkamotoUchiyama.js';
 import { Paillier } from './Paillier.js';
+import { Regev } from './Regev.js';
 import { RSA } from './RSA.js';
 import { SanderYoungYung } from './SanderYoungYung.js';
 
@@ -40,6 +48,24 @@ export { OkamotoUchiyama } from './OkamotoUchiyama.js';
 export { Paillier } from './Paillier.js';
 export { RSA } from './RSA.js';
 export { SanderYoungYung } from './SanderYoungYung.js';
+export { DamgardGeislerKroigaard } from './DamgardGeislerKroigaard.js';
+export { BressonCatalanoPointcheval } from './BressonCatalanoPointcheval.js';
+export { CamenischShoup } from './CamenischShoup.js';
+export { EllipticCurvePaillier } from './EllipticCurvePaillier.js';
+export { Regev, REGEV_FLOAT_NOT_SUPPORTED_MSG } from './Regev.js';
+export {
+  BrakerskiVaikuntanathan,
+  BV_FLOAT_NOT_SUPPORTED_MSG,
+} from './BrakerskiVaikuntanathan.js';
+export {
+  FreemanBonehGohNissim,
+  FBGN_FLOAT_NOT_SUPPORTED_MSG,
+} from './FreemanBonehGohNissim.js';
+export {
+  GentryHaleviVaikuntanathan,
+  GHV_FLOAT_NOT_SUPPORTED_MSG,
+  GHV_INSECURE_WARNING_MSG,
+} from './GentryHaleviVaikuntanathan.js';
 
 /** Options accepted when building a cryptosystem. */
 export interface BuildOptions {
@@ -74,6 +100,16 @@ export const REQUIRED_KEYS_BY_ALGORITHM: Readonly<
   [Algorithm.JoyeLibert]: JoyeLibert.REQUIRED_KEYS,
   [Algorithm.CastagnosLaguillaumie]: CastagnosLaguillaumie.REQUIRED_KEYS,
   [Algorithm.IshaiPaskin]: IshaiPaskin.REQUIRED_KEYS,
+  [Algorithm.DamgardGeislerKroigaard]: DamgardGeislerKroigaard.REQUIRED_KEYS,
+  [Algorithm.BressonCatalanoPointcheval]:
+    BressonCatalanoPointcheval.REQUIRED_KEYS,
+  [Algorithm.CamenischShoup]: CamenischShoup.REQUIRED_KEYS,
+  [Algorithm.EllipticCurvePaillier]: EllipticCurvePaillier.REQUIRED_KEYS,
+  [Algorithm.Regev]: Regev.REQUIRED_KEYS,
+  [Algorithm.BrakerskiVaikuntanathan]: BrakerskiVaikuntanathan.REQUIRED_KEYS,
+  [Algorithm.FreemanBonehGohNissim]: FreemanBonehGohNissim.REQUIRED_KEYS,
+  [Algorithm.GentryHaleviVaikuntanathan]:
+    GentryHaleviVaikuntanathan.REQUIRED_KEYS,
 };
 
 /**
@@ -120,6 +156,22 @@ export function buildCryptosystem(
       return new CastagnosLaguillaumie({ keys, keySize, maxTries });
     case Algorithm.IshaiPaskin:
       return new IshaiPaskin({ keys, keySize });
+    case Algorithm.DamgardGeislerKroigaard:
+      return new DamgardGeislerKroigaard({ keys, keySize, maxTries });
+    case Algorithm.BressonCatalanoPointcheval:
+      return new BressonCatalanoPointcheval({ keys, keySize, maxTries });
+    case Algorithm.CamenischShoup:
+      return new CamenischShoup({ keys, keySize, maxTries, form, curve });
+    case Algorithm.EllipticCurvePaillier:
+      return new EllipticCurvePaillier({ keys, keySize });
+    case Algorithm.Regev:
+      return new Regev({ keys, keySize, plaintextLimit });
+    case Algorithm.BrakerskiVaikuntanathan:
+      return new BrakerskiVaikuntanathan({ keys, keySize, plaintextLimit });
+    case Algorithm.FreemanBonehGohNissim:
+      return new FreemanBonehGohNissim({ keys, keySize, plaintextLimit });
+    case Algorithm.GentryHaleviVaikuntanathan:
+      return new GentryHaleviVaikuntanathan({ keys, keySize, plaintextLimit });
     default:
       throw new Error(`unimplemented algorithm - ${algorithmName}`);
   }
