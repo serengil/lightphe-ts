@@ -24,7 +24,9 @@
 [`Goldwasser–Micali`](https://sefiks.com/2023/10/27/a-step-by-step-partially-homomorphic-encryption-example-with-goldwasser-micali-in-python/),
 [`Sander-Young-Yung`](https://sefiks.com/2026/04/02/a-step-by-step-partially-homomorphic-sander-young-yung-example-in-python/),
 [`Boneh-Goh-Nissim`](https://sefiks.com/2026/04/02/a-step-by-step-somewhat-homomorphic-encryption-example-with-boneh-goh-nissim-in-python/),
-`Joye-Libert`, `Castagnos-Laguillaumie`, `Ishai-Paskin`.
+`Joye-Libert`, `Castagnos-Laguillaumie`, `Ishai-Paskin`, `Damgard-Geisler-Kroigaard`,
+`Bresson-Catalano-Pointcheval`, `Camenisch-Shoup`, `Elliptic Curve Paillier`, `Regev`,
+`Brakerski-Vaikuntanathan`, `Freeman-Boneh-Goh-Nissim`, `Gentry-Halevi-Vaikuntanathan`.
 
 It is a TypeScript port of [LightPHE](https://github.com/serengil/LightPHE), with the elliptic curve arithmetic of [LightECC](https://github.com/serengil/LightECC) folded in. It has **no runtime dependencies** — every large integer is a native `bigint`, and randomness comes from the platform CSPRNG.
 
@@ -79,23 +81,33 @@ Plaintexts and constants can be passed as either a `number` or a `bigint` — wh
 
 In summary, `lightphe-ts` covers the following algorithms, and these are partially homomorphic and somewhat homomorphic with respect to the operations mentioned in the following table.
 
-| Algorithm              | Multiplicatively<br>Homomorphic | Additively<br>Homomorphic | Scalar Multiplication | Bitwise-XOR Homomorphic | Bitwise-AND Homomorphic | Regeneration<br>of Ciphertext | Decision Tree<br>Evaluation |
-| ---------------------- | ------------------------------- | ------------------------- | --------------------- | ----------------------- | ----------------------- | ----------------------------- | --------------------------- |
-| RSA                    | ✅                              | ❌                        | ❌                    | ❌                      | ❌                      | ❌                            | ❌                          |
-| ElGamal                | ✅                              | ❌                        | ❌                    | ❌                      | ❌                      | ✅                            | ❌                          |
-| Exponential ElGamal    | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          |
-| Elliptic Curve ElGamal | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          |
-| Paillier               | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          |
-| Damgard-Jurik          | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          |
-| Benaloh                | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          |
-| Naccache-Stern         | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          |
-| Okamoto-Uchiyama       | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          |
-| Joye-Libert            | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          |
-| Castagnos-Laguillaumie | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          |
-| Ishai-Paskin           | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ✅                          |
-| Goldwasser-Micali      | ❌                              | ❌                        | ❌                    | ✅                      | ❌                      | ✅                            | ❌                          |
-| Sander-Young-Yung      | ❌                              | ❌                        | ❌                    | ❌                      | ✅                      | ✅                            | ❌                          |
-| Boneh-Goh-Nissim       | 1️⃣                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          |
+| Algorithm                    | Multiplicatively<br>Homomorphic | Additively<br>Homomorphic | Scalar Multiplication | Bitwise-XOR Homomorphic | Bitwise-AND Homomorphic | Regeneration<br>of Ciphertext | Decision Tree<br>Evaluation | Secure<br>Comparison | Encrypted<br>Argmax |
+| ---------------------------- | ------------------------------- | ------------------------- | --------------------- | ----------------------- | ----------------------- | ----------------------------- | --------------------------- | -------------------- | ------------------- |
+| RSA                          | ✅                              | ❌                        | ❌                    | ❌                      | ❌                      | ❌                            | ❌                          | ❌                   | ❌                  |
+| ElGamal                      | ✅                              | ❌                        | ❌                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
+| Exponential ElGamal          | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
+| Elliptic Curve ElGamal       | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
+| Paillier                     | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
+| Elliptic Curve Paillier      | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
+| Damgard-Jurik                | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
+| Benaloh                      | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
+| Naccache-Stern               | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
+| Okamoto-Uchiyama             | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
+| Joye-Libert                  | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
+| Castagnos-Laguillaumie       | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
+| Damgard-Geisler-Kroigaard    | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ✅                          | ✅                   | ✅                  |
+| Bresson-Catalano-Pointcheval | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
+| Camenisch-Shoup              | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
+| Ishai-Paskin                 | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ✅                          | ❌                   | ❌                  |
+| Regev                        | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
+| Goldwasser-Micali            | ❌                              | ❌                        | ❌                    | ✅                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
+| Sander-Young-Yung            | ❌                              | ❌                        | ❌                    | ❌                      | ✅                      | ✅                            | ❌                          | ❌                   | ❌                  |
+| Boneh-Goh-Nissim             | 1️⃣                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
+| Freeman-Boneh-Goh-Nissim     | 1️⃣                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
+| Brakerski-Vaikuntanathan     | 1️⃣                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
+| Gentry-Halevi-Vaikuntanathan | 1️⃣                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
+
+1️⃣ Boneh-Goh-Nissim, Freeman-Boneh-Goh-Nissim, Brakerski-Vaikuntanathan and Gentry-Halevi-Vaikuntanathan support one multiplication natively. Most additively homomorphic algorithms can support one multiplication with [Catalano-Fiore transform](#adding-multiplication-support-to-additive-algorithms) as well.
 
 # Building a cryptosystem
 
@@ -120,6 +132,14 @@ const algorithms = [
   'Joye-Libert',
   'Castagnos-Laguillaumie',
   'Ishai-Paskin',
+  'Damgard-Geisler-Kroigaard',
+  'Bresson-Catalano-Pointcheval',
+  'Camenisch-Shoup',
+  'EllipticCurve-Paillier',
+  'Regev',
+  'Brakerski-Vaikuntanathan',
+  'Freeman-Boneh-Goh-Nissim',
+  'Gentry-Halevi-Vaikuntanathan',
 ];
 
 const cs = new LightPHE({ algorithmName: algorithms[0] });
@@ -242,7 +262,11 @@ See the [`curves`](https://github.com/serengil/LightECC#supported-curves) page f
 
 ### Decision Trees
 
-Ishai-Paskin solves a different problem than the algorithms above. Suppose a bank has a secret decision tree that decides a customer's credit limit, and a customer has private yes / no answers. The bank does not want to reveal its tree, and the customer does not want to reveal their answers. With Ishai-Paskin, the customer sends encrypted answers, the bank runs its tree on them without seeing them, and only the customer can decrypt the result. The customer learns the credit limit but not the rest of the tree.
+`lightphe-ts` can evaluate decision trees privately. Suppose a bank has a secret decision tree that decides a customer's credit limit, and a customer has private data. The bank does not want to reveal its tree, and the customer does not want to reveal their data. The customer sends encrypted data, the bank runs its tree on it without seeing it, and only the customer can decrypt the result. The customer learns the credit limit but not the rest of the tree. Two cryptosystems support this: Ishai-Paskin for trees on yes / no answers, and Damgard-Geisler-Kroigaard for trees on numeric features.
+
+#### Decision Trees with Nominal Decisions
+
+Ishai-Paskin evaluates trees whose questions have yes / no answers, in a single round: the customer sends encrypted answers, and the bank sends back the encrypted result.
 
 Let the bank's tree be the following, where questions are numbered 0, 1 and 2 and leaves are credit limits in thousand dollars.
 
@@ -297,6 +321,270 @@ console.assert(customerCs.decrypt(encryptedLimit) === 5n);
 ```
 
 The size of the result grows with the depth of the tree, not with the number of its nodes. Still, each extra level makes the computation noticeably slower, so this is practical for shallow trees.
+
+#### Decision Trees with Numeric Decisions
+
+Damgard-Geisler-Kroigaard evaluates decision trees with numeric thresholds instead of yes / no answers, using the secure comparison protocol below at each node. It requires a few rounds of interaction between the customer and the bank, but its cost grows linearly with the number of nodes.
+
+Let the bank's tree be the following, where features are numbered 0 (age), 1 (income in thousand dollars) and 2 (number of open loans), and leaves are credit limits in thousand dollars.
+
+```
+                  F1: income <= 40?
+                 /yes                \no
+       F0: age <= 25?          F2: open loans <= 2?
+        /yes      \no            /yes           \no
+       0           5            20              10
+```
+
+Each decision node is written as an array of `[feature index, threshold, what to do if feature <= threshold, what to do otherwise]`, and leaves are plain integers. So, the tree above becomes:
+
+```typescript
+import { LightPHE, type NumericDecisionTree } from 'lightphe-ts';
+
+const creditLimitTree: NumericDecisionTree = [
+  1,
+  40,
+  [0, 25, 0, 5],
+  [2, 2, 20, 10],
+];
+```
+
+Then, the customer and the bank run the following steps.
+
+```typescript
+// customer: age = 30, income = 75 and open loans = 1
+// so, the expected path is income > 40 -> open loans <= 2 -> credit limit of 20
+const customerCs = new LightPHE({ algorithmName: 'Damgard-Geisler-Kroigaard' });
+const encryptedFeatures = customerCs.encryptDecisionTreeInput({
+  features: [30, 75, 1],
+  bitLength: 8,
+});
+
+// bank, having the customer's public key only
+const bankCs = new LightPHE({
+  algorithmName: 'Damgard-Geisler-Kroigaard',
+  keyFile: 'public.txt',
+});
+const [encryptedComparisons, bankState] =
+  bankCs.evaluateDecisionTreeComparisons(creditLimitTree, encryptedFeatures);
+
+// customer answers randomly flipped comparisons, so cannot follow the path in the tree
+const encryptedAnswers =
+  customerCs.answerDecisionTreeComparisons(encryptedComparisons);
+
+// bank keeps bankState secret and finds the reached leaf in encrypted form
+const encryptedLeaves = bankCs.evaluateDecisionTreeLeaves(
+  bankState,
+  encryptedAnswers
+);
+
+// customer learns only the credit limit
+console.assert(customerCs.decryptDecisionTreeOutput(encryptedLeaves) === 20n);
+```
+
+### Secure Comparison
+
+Damgard-Geisler-Kroigaard lets a client and a server find out whether the client's private value is less than or equal to the server's private value, without revealing the values to each other. For instance, a bidder can check whether their bid beats the reserve price of an auction.
+
+```typescript
+// client encrypts its value bit by bit
+const clientCs = new LightPHE({ algorithmName: 'Damgard-Geisler-Kroigaard' });
+const encryptedBid = clientCs.encryptComparisonInput(120, 16);
+
+// server compares it with its own value having the client's public key only
+const serverCs = new LightPHE({
+  algorithmName: 'Damgard-Geisler-Kroigaard',
+  keyFile: 'public.txt',
+});
+const encryptedResult = serverCs.evaluateComparison(encryptedBid, 150);
+
+// client learns only whether bid <= reserve price
+console.assert(clientCs.decryptComparison(encryptedResult) === true);
+```
+
+### Encrypted Argmax
+
+Damgard-Geisler-Kroigaard can also find the index of the maximum among encrypted values. For instance, a server can compute encrypted class scores of a linear classifier on a client's encrypted features, and then find the predicted class. The client learns only the index, neither the scores nor the intermediate comparisons, and the server learns nothing. The protocol needs a few round trips per value, so the server talks to the client through a callable, and `evaluateArgmax` returns a promise. Locally, the callable can be the client's `answerArgmax` directly. Otherwise, wrap your network call with it — it may return a promise as well.
+
+```typescript
+// client encrypts its features
+const clientCs = new LightPHE({ algorithmName: 'Damgard-Geisler-Kroigaard' });
+const encryptedFeatures = [3, 1, 4].map((feature) => clientCs.encrypt(feature));
+
+// server computes class scores with its private weights homomorphically
+const serverCs = new LightPHE({
+  algorithmName: 'Damgard-Geisler-Kroigaard',
+  keyFile: 'public.txt',
+});
+const weights = [
+  [1, 2, 0],
+  [0, 1, 3],
+  [2, 0, 1],
+];
+const encryptedScores = weights.map((classWeights) =>
+  classWeights
+    .slice(1)
+    .reduce(
+      (score, weight, i) =>
+        score.add(encryptedFeatures[i + 1].multiply(weight)),
+      encryptedFeatures[0].multiply(classWeights[0])
+    )
+);
+
+// server finds the argmax with the client's help - scores must fit into bitLength bits
+const encryptedClass = await serverCs.evaluateArgmax(
+  encryptedScores,
+  8,
+  clientCs.answerArgmax
+);
+
+// client learns only the predicted class
+console.assert(clientCs.decrypt(encryptedClass) === 1n);
+```
+
+### Master Key Decryption
+
+Bresson-Catalano-Pointcheval has two ways to decrypt a ciphertext. Each user decrypts with its own private key, while an authority holding the master key decrypts ciphertexts of all users. For instance, a company can let every employee encrypt with their own key, and still recover the data if an employee leaves. Keep in mind that the master key holder can read everything by design.
+
+```typescript
+// authority generates the master key and publishes its public key
+const authorityCs = new LightPHE({
+  algorithmName: 'Bresson-Catalano-Pointcheval',
+});
+authorityCs.exportKeys('public.txt', true);
+
+// each user generates its own key pair with the public key of the authority
+const publicCs = new LightPHE({
+  algorithmName: 'Bresson-Catalano-Pointcheval',
+  keyFile: 'public.txt',
+});
+const aliceCs = new LightPHE({
+  algorithmName: 'Bresson-Catalano-Pointcheval',
+  keys: publicCs.generateUserKeys(),
+});
+const bobCs = new LightPHE({
+  algorithmName: 'Bresson-Catalano-Pointcheval',
+  keys: publicCs.generateUserKeys(),
+});
+
+const aliceCiphertext = aliceCs.encrypt(100).add(aliceCs.encrypt(50));
+const bobCiphertext = bobCs.encrypt(200);
+
+// users decrypt their own ciphertexts only
+console.assert(aliceCs.decrypt(aliceCiphertext) === 150n);
+console.assert(aliceCs.decrypt(bobCiphertext) !== 200n);
+
+// authority decrypts ciphertexts of all users
+console.assert(authorityCs.decryptWithMasterKey(aliceCiphertext) === 150n);
+console.assert(authorityCs.decryptWithMasterKey(bobCiphertext) === 200n);
+```
+
+### Verifiable Encryption
+
+Camenisch-Shoup lets you encrypt a secret for someone else and prove that the ciphertext really contains it, without revealing the secret. For instance, Alice can escrow the private key of her crypto wallet with a trusted third party. A bank, which knows only her public key, verifies that the escrowed ciphertext contains its private key, and the trusted third party can recover it only under the conditions written in the label.
+
+```typescript
+import { LightECC, LightPHE } from 'lightphe-ts';
+
+// trusted third party builds the cryptosystem and publishes its public key
+const ttpCs = new LightPHE({ algorithmName: 'Camenisch-Shoup' });
+ttpCs.exportKeys('public.txt', true);
+
+// alice's wallet key pair on secp256k1
+const ecc = new LightECC({ curveName: 'secp256k1' });
+const privateKey = 123456789n;
+const publicKey = ecc.G.multiply(privateKey);
+
+// alice encrypts her private key for the trusted third party with a proof
+const label = 'release only if alice loses access to her wallet';
+const aliceCs = new LightPHE({
+  algorithmName: 'Camenisch-Shoup',
+  keyFile: 'public.txt',
+});
+const escrow = aliceCs.encryptVerifiably(privateKey, label);
+
+// bank verifies it with public keys only, without learning alice's private key
+const bankCs = new LightPHE({
+  algorithmName: 'Camenisch-Shoup',
+  keyFile: 'public.txt',
+});
+console.assert(bankCs.verifyEncryption(escrow, publicKey, label) === true);
+
+// trusted third party recovers the private key under the same label only
+console.assert(ttpCs.decryptVerifiableCiphertext(escrow, label) === privateKey);
+```
+
+Private keys of other curves can be escrowed by passing `form` and `curve` options while building the cryptosystem. Verifiable ciphertexts reject any modification, so homomorphic operations are applied to regular ciphertexts created with `encrypt`. Proofs are interoperable with the Python library.
+
+### Adding Multiplication Support to Additive Algorithms
+
+Additively homomorphic algorithms cannot multiply two ciphertexts. Boosting them with Catalano-Fiore transform adds one multiplication on top of them, without changing the algorithms themselves. This lets you evaluate degree-2 functions on encrypted data, such as dot products of two encrypted vectors, variances or squared distances. It supports Paillier, Damgard-Jurik, Bresson-Catalano-Pointcheval, Camenisch-Shoup, Elliptic Curve Paillier, Joye-Libert, Castagnos-Laguillaumie, Naccache-Stern, Benaloh and Damgard-Geisler-Kroigaard.
+
+```typescript
+// client builds a boosted cryptosystem, and encrypts its private vectors
+const clientCs = new LightPHE({
+  algorithmName: 'Paillier',
+  boost: 'Catalano-Fiore',
+});
+
+const x = [3, 1, 4];
+const y = [1, 5, 9];
+const encryptedX = x.map((value) => clientCs.encrypt(value));
+const encryptedY = y.map((value) => clientCs.encrypt(value));
+
+// server computes dot product of encrypted vectors - ciphertexts carry the public key only
+const encryptedDot = encryptedX
+  .map((ex, i) => ex.multiply(encryptedY[i]))
+  .reduce((acc, product) => acc.add(product));
+
+// squared euclidean distance is also a degree-2 function
+const encryptedDistance = encryptedX
+  .map((ex, i) => {
+    const difference = ex.subtract(encryptedY[i]);
+    return difference.multiply(difference);
+  })
+  .reduce((acc, square) => acc.add(square));
+
+// client decrypts the results
+console.assert(clientCs.decrypt(encryptedDot) === 44n);
+console.assert(clientCs.decrypt(encryptedDistance) === 45n);
+```
+
+Boosted ciphertexts are `CatalanoFioreCiphertext` objects supporting `add`, `subtract`, `negate` and `multiply` with ciphertexts or plain integers. Multiplied ciphertexts can be added and multiplied with constants, but not multiplied with ciphertexts again. They keep a pair of ciphertexts for every product, so a dot product of length d grows d times. Only integers are supported.
+
+### Post-Quantum Security
+
+Most algorithms in `lightphe-ts` rely on factoring or discrete logarithm problems, which a large enough quantum computer could solve with Shor's algorithm. Regev and Brakerski-Vaikuntanathan rely on learning with errors problems instead, which are believed to be hard for quantum computers too. Their default key sizes give about 128-bit security against quantum attacks.
+
+Regev is additively homomorphic. Its key size is the lattice dimension, and its default is 2048.
+
+```typescript
+const cs = new LightPHE({ algorithmName: 'Regev' });
+
+const c1 = cs.encrypt(1500);
+const c2 = cs.encrypt(2500);
+
+console.assert(cs.decrypt(c1.add(c2)) === 4000n);
+console.assert(cs.decrypt(c1.multiply(3)) === 4500n);
+```
+
+Brakerski-Vaikuntanathan additionally supports one multiplication of ciphertexts like Boneh-Goh-Nissim, but without pairings. Its key size is the degree of its polynomial ring, and its default is 4096.
+
+```typescript
+const cs = new LightPHE({ algorithmName: 'Brakerski-Vaikuntanathan' });
+
+const c1 = cs.encrypt(15);
+const c2 = cs.encrypt(25);
+const c3 = cs.encrypt(100);
+
+// one multiplication, then additions and multiplications with constants
+console.assert(cs.decrypt(c1.multiply(c2).add(c3)) === 475n);
+console.assert(
+  cs.decrypt(c1.multiply(c2).multiply(2).add(c1.multiply(c3))) === 2250n
+);
+```
+
+Every ciphertext of these algorithms carries a small noise, which grows with each homomorphic operation, and decryption silently fails once it grows too much. With default settings, plaintexts must be less than 2^24. Regev has room for thousands of additions or multiplications with constants up to a few thousands, and a product of Brakerski-Vaikuntanathan has room for millions of times more noise. You can increase the plaintext space with the `plaintextLimit` option in exchange of less room for noise. Floats and tensors are not supported.
 
 ### Vector Embeddings
 

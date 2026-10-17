@@ -36,10 +36,26 @@ describe('README examples', () => {
       'Joye-Libert',
       'Castagnos-Laguillaumie',
       'Ishai-Paskin',
+      'Damgard-Geisler-Kroigaard',
+      'Bresson-Catalano-Pointcheval',
+      'Camenisch-Shoup',
+      'EllipticCurve-Paillier',
+      'Regev',
+      'Brakerski-Vaikuntanathan',
+      'Freeman-Boneh-Goh-Nissim',
+      'Gentry-Halevi-Vaikuntanathan',
     ];
 
+    // lattice based ones take dimensions instead of bit lengths
+    const keySizes: Record<string, number> = {
+      'Brakerski-Vaikuntanathan': 64,
+      'Freeman-Boneh-Goh-Nissim': 64,
+      'Gentry-Halevi-Vaikuntanathan': 2,
+    };
+
     for (const algorithmName of algorithms) {
-      const cs = new LightPHE({ algorithmName, keySize: 50 });
+      const keySize = keySizes[algorithmName] ?? 50;
+      const cs = new LightPHE({ algorithmName, keySize });
       expect(cs.cs.keys.public_key).toBeDefined();
     }
   });
@@ -210,5 +226,68 @@ describe('README examples', () => {
     const rebuilt = cs.createCiphertextObj(payload);
 
     expect(cs.decrypt(rebuilt)).toBe(17n);
+  });
+
+  it('runs the encrypted argmax walkthrough', async () => {
+    const clientCs = new LightPHE({
+      algorithmName: 'Damgard-Geisler-Kroigaard',
+      keySize: 256,
+    });
+    const encryptedFeatures = [3, 1, 4].map((feature) =>
+      clientCs.encrypt(feature)
+    );
+
+    const serverCs = new LightPHE({
+      algorithmName: 'Damgard-Geisler-Kroigaard',
+      keys: { public_key: clientCs.cs.keys.public_key },
+    });
+    const weights = [
+      [1, 2, 0],
+      [0, 1, 3],
+      [2, 0, 1],
+    ];
+    const encryptedScores = weights.map((classWeights) =>
+      classWeights
+        .slice(1)
+        .reduce(
+          (score, weight, i) =>
+            score.add(encryptedFeatures[i + 1].multiply(weight)),
+          encryptedFeatures[0].multiply(classWeights[0])
+        )
+    );
+
+    const encryptedClass = await serverCs.evaluateArgmax(
+      encryptedScores,
+      8,
+      clientCs.answerArgmax
+    );
+    expect(clientCs.decrypt(encryptedClass)).toBe(1n);
+  });
+
+  it('runs the Catalano-Fiore walkthrough', () => {
+    const clientCs = new LightPHE({
+      algorithmName: 'Paillier',
+      keySize: 256,
+      boost: 'Catalano-Fiore',
+    });
+
+    const x = [3, 1, 4];
+    const y = [1, 5, 9];
+    const encryptedX = x.map((value) => clientCs.encrypt(value));
+    const encryptedY = y.map((value) => clientCs.encrypt(value));
+
+    const encryptedDot = encryptedX
+      .map((ex, i) => ex.multiply(encryptedY[i]))
+      .reduce((acc, product) => acc.add(product));
+
+    const encryptedDistance = encryptedX
+      .map((ex, i) => {
+        const difference = ex.subtract(encryptedY[i]);
+        return difference.multiply(difference);
+      })
+      .reduce((acc, square) => acc.add(square));
+
+    expect(clientCs.decrypt(encryptedDot)).toBe(44n);
+    expect(clientCs.decrypt(encryptedDistance)).toBe(45n);
   });
 });

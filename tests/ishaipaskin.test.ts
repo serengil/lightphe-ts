@@ -106,23 +106,66 @@ describe('Ishai-Paskin', () => {
   });
 
   it('evaluates boolean decision trees', () => {
+    // xi? asks the i-th input bit. left branch is taken if it is 0, right branch if it is 1.
+
+    //        x0?
+    //      /0   \1
+    //     x1?    1
+    //   /0   \1
+    //  0      1
     assertTree([0, [1, 0, 1], 1], 2); // x0 OR x1
+
+    //     x0?
+    //   /0   \1
+    //  0     x1?
+    //      /0   \1
+    //     0      1
     assertTree([0, 0, [1, 0, 1]], 2); // x0 AND x1
+
+    //     x1?
+    //   /0   \1
+    //  1      0
     assertTree([1, 1, 0], 2); // NOT x1
 
-    // shared sub trees (DAG) are evaluated once
+    // shared sub trees (DAG) are evaluated once. x2? nodes below are only two objects,
+    // x2Is1 (0, 1 leaves) and x2Is0 (1, 0 leaves), each referenced twice.
+    //
+    //                    x0?
+    //           /0                 \1
+    //         x1?                   x1?
+    //       /0     \1             /0     \1
+    //     x2?       x2?         x2?       x2?
+    //    /0  \1    /0  \1      /0  \1    /0  \1
+    //   0     1   1     0     1     0   0     1
     const x2Is0: DecisionTree = [2, 1, 0];
     const x2Is1: DecisionTree = [2, 0, 1];
     const x1XorX2: DecisionTree = [1, x2Is1, x2Is0];
     const x1XnorX2: DecisionTree = [1, x2Is0, x2Is1];
     assertTree([0, x1XorX2, x1XnorX2], 3);
 
+    // majority vote of x0, x1 and x2
+    //
+    //                x0?
+    //          /0           \1
+    //        x1?             x1?
+    //      /0   \1         /0   \1
+    //     0     x2?       x2?    1
+    //         /0   \1   /0   \1
+    //        0      1  0      1
     const majority: DecisionTree = [0, [1, 0, [2, 0, 1]], [1, [2, 0, 1], 1]];
     assertTree(majority, 3);
   });
 
   it('evaluates decision trees with non-binary leaves', () => {
     // leaves at different depths returning class labels
+    //
+    //             x0?
+    //          /0     \1
+    //        x1?       40
+    //      /0   \1
+    //     10    x2?
+    //         /0   \1
+    //        20     30
     const decisionTree: DecisionTree = [0, [1, 10, [2, 20, 30]], 40];
     assertTree(decisionTree, 3);
 
@@ -134,6 +177,13 @@ describe('Ishai-Paskin', () => {
   });
 
   it('re-randomizes the output', () => {
+    // x0 or x1
+    //
+    //        x0?
+    //      /0   \1
+    //     x1?    1
+    //   /0   \1
+    //  0      1
     const tree: DecisionTree = [0, [1, 0, 1], 1];
     const encryptedInput = cs.encryptDecisionTreeInput([1, 0], 2);
     const output1 = cs.evaluateDecisionTree(tree, encryptedInput);
@@ -150,8 +200,15 @@ describe('Ishai-Paskin', () => {
   });
 
   it('runs the credit limit example in the readme', () => {
-    // bank's secret tree: Q0 = has stable income?, Q1 = has existing debt?,
-    // Q2 = owns a house?, leaves are credit limits in thousand dollars
+    // bank's secret tree drawn in the readme. leaves are credit limits in thousand dollars.
+    //
+    //                   Q0: has stable income?
+    //                  /no                    \yes
+    //      Q2: owns a house?              Q1: has existing debt?
+    //        /no        \yes               /no           \yes
+    //       0            5               20         Q2: owns a house?
+    //                                                 /no       \yes
+    //                                                5          10
     const creditLimitTree: DecisionTree = [0, [2, 0, 5], [1, 20, [2, 5, 10]]];
 
     // customer builds the cryptosystem and keeps the private key
@@ -239,6 +296,7 @@ describe('Ishai-Paskin', () => {
       algorithmName: 'Ishai-Paskin',
       keySize: 1024,
     });
+    // majority vote of x0, x1 and x2, drawn in the boolean trees test
     const majority: DecisionTree = [0, [1, 0, [2, 0, 1]], [1, [2, 0, 1], 1]];
     for (const bits of [
       [1, 0, 1],

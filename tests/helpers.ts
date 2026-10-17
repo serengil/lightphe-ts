@@ -49,3 +49,23 @@ export function bitLength(value: bigint): number {
   const magnitude = value < 0n ? -value : value;
   return magnitude === 0n ? 0 : magnitude.toString(2).length;
 }
+
+/** A uniform random integer in the inclusive range `[lo, hi]`, like Python's `random.randint`. */
+export function randomInt(lo: number, hi: number): number {
+  return lo + Math.floor(Math.random() * (hi - lo + 1));
+}
+
+/** A uniform random bigint in `[0, bound)`, like Python's `random.randrange`. */
+export function randomBigInt(bound: bigint): bigint {
+  const digits = bound.toString(16).length + 8;
+  let hex = '';
+  for (let i = 0; i < digits; i++) {
+    hex += Math.floor(Math.random() * 16).toString(16);
+  }
+  return BigInt(`0x${hex}`) % bound;
+}
+
+/** Python-style modulo for bigints, always in `[0, m)`. */
+export function pmod(a: bigint, m: bigint): bigint {
+  return ((a % m) + m) % m;
+}

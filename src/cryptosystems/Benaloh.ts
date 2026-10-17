@@ -100,8 +100,15 @@ export class Benaloh extends Homomorphic {
         continue;
       }
 
-      // to guarantee correct decryption, none of r's prime factors may satisfy
-      // y^(phi/factor) = 1 mod n
+      // to guarantee correct decryption, x = y^(phi/r) must have order exactly r.
+      // Benaloh's original key generation only checks y^(phi/r) != 1 mod n, which
+      // is not enough for a composite r: x may then have a smaller order, so
+      // different messages would map to the same x^m and decryption would be
+      // ambiguous. The corrected condition checks every prime factor of r as
+      // below. Since r is always prime here, both conditions are the same, but
+      // this check keeps keys correct even if r becomes composite in the future.
+      // Ref: Fousse, L., Lafourcade, P., Alnuaimi, M. (2011). Benaloh's Dense
+      //     Probabilistic Encryption Revisited. AFRICACRYPT 2011.
       let decryptionGuaranteed = true;
       for (const primeFactor of primeFactors(r)) {
         if (modPow(y, phi / primeFactor, n) === ONE) {
@@ -149,7 +156,7 @@ export class Benaloh extends Homomorphic {
         : this.generateRandomKey();
 
     let message = plaintext;
-    if (message > r) {
+    if (message >= r) {
       const original = message;
       message = message % r;
       logger.info(
@@ -203,7 +210,7 @@ export class Benaloh extends Homomorphic {
   ): CiphertextValue {
     const n = this.keys.public_key!.n as bigint;
     let k = constant;
-    if (k > this.plaintextModulo) {
+    if (k >= this.plaintextModulo) {
       k = k % this.plaintextModulo;
       logger.info(
         `Benaloh can encrypt messages [1, ${this.plaintextModulo}]. ` +

@@ -13,6 +13,11 @@ function typeName(value: unknown): string {
   return typeof value;
 }
 
+/** Renders field names the way Python prints a list of strings. */
+function formatFields(fields: readonly string[]): string {
+  return `[${fields.map((field) => `'${field}'`).join(', ')}]`;
+}
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -24,7 +29,9 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  * `private_key` is optional, since encryption-only setups omit it; whichever
  * part is present must be complete.
  *
- * The spec comes from the cryptosystem's own `REQUIRED_KEYS` declaration.
+ * The spec comes from the cryptosystem's own `REQUIRED_KEYS` declaration. An
+ * optional `alternative_private_key` entry lists another set of fields that is
+ * accepted instead of the required `private_key` fields.
  *
  * @throws when a required field is missing or the structure is wrong.
  */
@@ -58,11 +65,23 @@ export function validateKeys(
       );
     }
     const missing = spec[kind].filter((field) => !(field in part));
+    const alternative =
+      kind === 'private_key' ? spec.alternative_private_key : undefined;
+    if (missing.length > 0 && alternative !== undefined) {
+      if (alternative.every((field) => field in part)) {
+        continue;
+      }
+      throw new Error(
+        `${algorithmName} '${kind}' is missing required fields: ${formatFields(
+          missing
+        )} (or alternatively ${formatFields(alternative)})`
+      );
+    }
     if (missing.length > 0) {
       throw new Error(
-        `${algorithmName} '${kind}' is missing required fields: [${missing
-          .map((field) => `'${field}'`)
-          .join(', ')}]`
+        `${algorithmName} '${kind}' is missing required fields: ${formatFields(
+          missing
+        )}`
       );
     }
   }
@@ -82,9 +101,9 @@ export function validateKeys(
     const missing = required.filter((field) => !(field in sub));
     if (missing.length > 0) {
       throw new Error(
-        `${algorithmName} 'public_key.${parent}' is missing required fields: [${missing
-          .map((field) => `'${field}'`)
-          .join(', ')}]`
+        `${algorithmName} 'public_key.${parent}' is missing required fields: ${formatFields(
+          missing
+        )}`
       );
     }
   }
