@@ -107,8 +107,8 @@ export class EllipticCurveElGamal extends Homomorphic {
     const ka = this.keys.private_key!.ka as bigint;
 
     const [c1Raw, c2Raw] = ciphertext as ECPair;
-    const c1 = new EllipticCurvePoint(c1Raw[0], c1Raw[1], this.ecc.curve);
-    const c2 = new EllipticCurvePoint(c2Raw[0], c2Raw[1], this.ecc.curve);
+    const c1 = EllipticCurvePoint.restore(c1Raw[0], c1Raw[1], this.ecc.curve);
+    const c2 = EllipticCurvePoint.restore(c2Raw[0], c2Raw[1], this.ecc.curve);
 
     const sPrime = c1.negate().multiply(ka).add(c2);
 
@@ -126,11 +126,11 @@ export class EllipticCurveElGamal extends Homomorphic {
     const [b1, b2] = ciphertext2 as ECPair;
 
     const curve = this.ecc.curve;
-    const a = new EllipticCurvePoint(a1[0], a1[1], curve).add(
-      new EllipticCurvePoint(b1[0], b1[1], curve)
+    const a = EllipticCurvePoint.restore(a1[0], a1[1], curve).add(
+      EllipticCurvePoint.restore(b1[0], b1[1], curve)
     );
-    const b = new EllipticCurvePoint(a2[0], a2[1], curve).add(
-      new EllipticCurvePoint(b2[0], b2[1], curve)
+    const b = EllipticCurvePoint.restore(a2[0], a2[1], curve).add(
+      EllipticCurvePoint.restore(b2[0], b2[1], curve)
     );
 
     return [a.getPoint(), b.getPoint()];
@@ -146,10 +146,10 @@ export class EllipticCurveElGamal extends Homomorphic {
     const [pRaw, qRaw] = ciphertext as ECPair;
     const curve = this.ecc.curve;
 
-    const p = new EllipticCurvePoint(pRaw[0], pRaw[1], curve).multiply(
+    const p = EllipticCurvePoint.restore(pRaw[0], pRaw[1], curve).multiply(
       constant
     );
-    const q = new EllipticCurvePoint(qRaw[0], qRaw[1], curve).multiply(
+    const q = EllipticCurvePoint.restore(qRaw[0], qRaw[1], curve).multiply(
       constant
     );
 
@@ -163,8 +163,8 @@ export class EllipticCurveElGamal extends Homomorphic {
     const Qa = new EllipticCurvePoint(x, y, this.ecc.curve);
 
     const [c1Raw, c2Raw] = ciphertext as ECPair;
-    const c1 = new EllipticCurvePoint(c1Raw[0], c1Raw[1], this.ecc.curve);
-    const c2 = new EllipticCurvePoint(c2Raw[0], c2Raw[1], this.ecc.curve);
+    const c1 = EllipticCurvePoint.restore(c1Raw[0], c1Raw[1], this.ecc.curve);
+    const c2 = EllipticCurvePoint.restore(c2Raw[0], c2Raw[1], this.ecc.curve);
 
     const c1Prime = c1.add(this.ecc.G.multiply(rPrime));
     const c2Prime = c2.add(Qa.multiply(rPrime));
