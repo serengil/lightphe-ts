@@ -161,6 +161,9 @@ export class LightPHE<Boost extends string | null | undefined = undefined> {
   /** The cryptosystem this instance was built around. */
   readonly cs: Homomorphic;
 
+  // public-key-only cryptosystem shared by ciphertexts, built on first use
+  private publicCs: Homomorphic | null = null;
+
   // Catalano-Fiore transform wraps a copy of this instance without the transform
   private readonly catalanoFiore: CatalanoFiore | null;
 
@@ -199,6 +202,32 @@ export class LightPHE<Boost extends string | null | undefined = undefined> {
       }
       this.catalanoFiore = new CatalanoFiore(this.withoutBoost());
     }
+  }
+
+  /** Wraps a payload into a ciphertext carrying public keys only. */
+  private publicCiphertext(value: CiphertextValue): Ciphertext {
+    if (this.publicCs == null) {
+      const publicKeys: Keys = { ...this.cs.keys };
+      delete publicKeys.private_key;
+      const ciphertext = new Ciphertext({
+        algorithmName: this.algorithmName,
+        keys: publicKeys,
+        value,
+        form: this.form,
+        curve: this.curve,
+      });
+      this.publicCs = ciphertext.cs;
+      return ciphertext;
+    }
+
+    return new Ciphertext({
+      algorithmName: this.algorithmName,
+      keys: this.publicCs.keys,
+      value,
+      form: this.form,
+      curve: this.curve,
+      cs: this.publicCs,
+    });
   }
 
   /** A shallow copy of this instance without the boost. */
@@ -259,16 +288,7 @@ export class LightPHE<Boost extends string | null | undefined = undefined> {
       normalizeInput(plaintext, this.cs.plaintextModulo)
     );
 
-    const publicKeys: Keys = { ...this.cs.keys };
-    delete publicKeys.private_key;
-
-    return new Ciphertext({
-      algorithmName: this.algorithmName,
-      keys: publicKeys,
-      value: ciphertext,
-      form: this.form,
-      curve: this.curve,
-    });
+    return this.publicCiphertext(ciphertext);
   }
 
   /** Decrypts a ciphertext. The private key is required. */
@@ -536,14 +556,7 @@ export class LightPHE<Boost extends string | null | undefined = undefined> {
 
     const output = this.cs.evaluateDecisionTree(tree, encryptedInput);
 
-    const publicKeys: Keys = { ...this.cs.keys };
-    delete publicKeys.private_key;
-
-    return new Ciphertext({
-      algorithmName: this.algorithmName,
-      keys: publicKeys,
-      value: output,
-    });
+    return this.publicCiphertext(output);
   }
 
   /**
@@ -687,14 +700,7 @@ export class LightPHE<Boost extends string | null | undefined = undefined> {
       client
     );
 
-    const publicKeys: Keys = { ...this.cs.keys };
-    delete publicKeys.private_key;
-
-    return new Ciphertext({
-      algorithmName: this.algorithmName,
-      keys: publicKeys,
-      value: output,
-    });
+    return this.publicCiphertext(output);
   }
 
   /**

@@ -35,6 +35,8 @@ export class Ciphertext {
     value: CiphertextValue;
     form?: CurveForm | string | null;
     curve?: string | null;
+    /** An already built cryptosystem to reuse, as constructing one can be expensive. */
+    cs?: Homomorphic;
   }) {
     this.algorithmName = options.algorithmName;
     this.keys = options.keys;
@@ -42,11 +44,13 @@ export class Ciphertext {
     this.form = options.form;
     this.curve = options.curve;
 
-    this.cs = buildCryptosystem(options.algorithmName, {
-      keys: options.keys,
-      form: options.form,
-      curve: options.curve,
-    });
+    this.cs =
+      options.cs ??
+      buildCryptosystem(options.algorithmName, {
+        keys: options.keys,
+        form: options.form,
+        curve: options.curve,
+      });
   }
 
   toString(): string {
@@ -61,6 +65,7 @@ export class Ciphertext {
       value,
       form: this.form,
       curve: this.curve,
+      cs: this.cs,
     });
   }
 

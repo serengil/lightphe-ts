@@ -47,6 +47,15 @@ describe('Elliptic Curve ElGamal', () => {
       expect(cs.decrypt(c1.multiplyByConstant(m2))).toBe(BigInt(m1 * m2));
       expect(cs.decrypt(c2.multiplyByConstant(m1))).toBe(BigInt(m1 * m2));
 
+      // zero: identity element (point at infinity) cases
+      const c0 = cs.encrypt(0);
+      expect(cs.decrypt(c0)).toBe(0n);
+      expect(cs.decrypt(c1.multiply(0))).toBe(0n);
+      expect(cs.decrypt(c1.multiply(0).multiply(m2))).toBe(0n);
+      expect(cs.decrypt(c0.add(c2))).toBe(BigInt(m2));
+      expect(cs.decrypt(c1.multiply(0).add(c2))).toBe(BigInt(m2));
+      expect(cs.cs.decrypt(cs.cs.reencrypt(c1.multiply(0).value))).toBe(0n);
+
       // unsupported homomorphic operations
       expect(() => c1.multiply(c2)).toThrow();
       expect(() => c1.xor(c2)).toThrow();

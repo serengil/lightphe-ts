@@ -84,6 +84,19 @@ export class EllipticCurvePoint {
     return new EllipticCurvePoint(x, y, curve, false, true);
   }
 
+  /**
+   * Rebuilds a point from the coordinates `getPoint()` returned. The point at
+   * infinity of Weierstrass and Koblitz curves comes back as `(0, 0)`, which is
+   * never an affine point on them, so it is restored to the identity.
+   */
+  static restore(x: bigint, y: bigint, curve: Curve): EllipticCurvePoint {
+    const identity = curve.identity();
+    if (identity.infinity && x === identity.x && y === identity.y) {
+      return identity;
+    }
+    return new EllipticCurvePoint(x, y, curve);
+  }
+
   /** Reports whether this is the neutral element of its curve. */
   isIdentity(): boolean {
     return this.equals(this.curve.identity());
