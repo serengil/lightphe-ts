@@ -4,7 +4,7 @@ title: "lightphe-ts: A Lightweight Partially Homomorphic Encryption Library for 
 authors:
   - family-names: Serengil
     given-names: Sefik Ilkin
-version: 0.0.1
+version: 0.0.4
 date-released: 2026-09-07
 doi: 10.3390/sym18050832
 url: https://github.com/serengil/lightphe-ts

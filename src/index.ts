@@ -41,7 +41,7 @@ import type {
 const logger = new Logger('lightphe-ts/index.ts');
 
 /** The version of this package. */
-export const VERSION = '0.0.3';
+export const VERSION = '0.0.4';
 
 /** Algorithms rejecting floats and tensors, as they are scaled by powers of 10. */
 const TENSOR_NOT_SUPPORTED_ALGORITHMS: readonly string[] = [
