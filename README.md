@@ -26,7 +26,8 @@
 [`Boneh-Goh-Nissim`](https://sefiks.com/2026/04/02/a-step-by-step-somewhat-homomorphic-encryption-example-with-boneh-goh-nissim-in-python/),
 `Joye-Libert`, `Castagnos-Laguillaumie`, `Ishai-Paskin`, `Damgard-Geisler-Kroigaard`,
 `Bresson-Catalano-Pointcheval`, `Camenisch-Shoup`, `Elliptic Curve Paillier`, `Regev`,
-`Brakerski-Vaikuntanathan`, `Freeman-Boneh-Goh-Nissim`, `Gentry-Halevi-Vaikuntanathan`. It also
+`Lyubashevsky-Peikert-Regev`, `ML-KEM`, `Brakerski-Vaikuntanathan`, `Freeman-Boneh-Goh-Nissim`,
+`Gentry-Halevi-Vaikuntanathan`, `Gentry-Sahai-Waters`. It also
 supports [`Catalano-Fiore`](#adding-multiplication-support-to-additive-algorithms) transform to add
 one multiplication to additively homomorphic ones.
 
@@ -83,31 +84,34 @@ Plaintexts and constants can be passed as either a `number` or a `bigint` — wh
 
 In summary, `lightphe-ts` covers the following algorithms, and these are partially homomorphic and somewhat homomorphic with respect to the operations mentioned in the following table.
 
-| Algorithm                    | Multiplicatively<br>Homomorphic | Additively<br>Homomorphic | Scalar Multiplication | Bitwise-XOR Homomorphic | Bitwise-AND Homomorphic | Regeneration<br>of Ciphertext | Decision Tree<br>Evaluation | Secure<br>Comparison | Encrypted<br>Argmax |
-| ---------------------------- | ------------------------------- | ------------------------- | --------------------- | ----------------------- | ----------------------- | ----------------------------- | --------------------------- | -------------------- | ------------------- |
-| RSA                          | ✅                              | ❌                        | ❌                    | ❌                      | ❌                      | ❌                            | ❌                          | ❌                   | ❌                  |
-| ElGamal                      | ✅                              | ❌                        | ❌                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
-| Exponential ElGamal          | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
-| Elliptic Curve ElGamal       | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
-| Paillier                     | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
-| Elliptic Curve Paillier      | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
-| Damgard-Jurik                | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
-| Benaloh                      | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
-| Naccache-Stern               | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
-| Okamoto-Uchiyama             | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
-| Joye-Libert                  | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
-| Castagnos-Laguillaumie       | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
-| Damgard-Geisler-Kroigaard    | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ✅                          | ✅                   | ✅                  |
-| Bresson-Catalano-Pointcheval | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
-| Camenisch-Shoup              | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
-| Ishai-Paskin                 | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ✅                          | ❌                   | ❌                  |
-| Regev                        | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
-| Goldwasser-Micali            | ❌                              | ❌                        | ❌                    | ✅                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
-| Sander-Young-Yung            | ❌                              | ❌                        | ❌                    | ❌                      | ✅                      | ✅                            | ❌                          | ❌                   | ❌                  |
-| Boneh-Goh-Nissim             | 1️⃣                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
-| Freeman-Boneh-Goh-Nissim     | 1️⃣                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
-| Brakerski-Vaikuntanathan     | 1️⃣                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
-| Gentry-Halevi-Vaikuntanathan | 1️⃣                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  |
+| Algorithm                    | Multiplicatively<br>Homomorphic | Additively<br>Homomorphic | Scalar Multiplication | Bitwise-XOR Homomorphic | Bitwise-AND Homomorphic | Regeneration<br>of Ciphertext | Decision Tree<br>Evaluation | Secure<br>Comparison | Encrypted<br>Argmax | Threshold<br>Decryption | Zero-Knowledge<br>Proofs |
+| ---------------------------- | ------------------------------- | ------------------------- | --------------------- | ----------------------- | ----------------------- | ----------------------------- | --------------------------- | -------------------- | ------------------- | ----------------------- | ------------------------ |
+| RSA                          | ✅                              | ❌                        | ❌                    | ❌                      | ❌                      | ❌                            | ❌                          | ❌                   | ❌                  | ❌                      | ❌                       |
+| ElGamal                      | ✅                              | ❌                        | ❌                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  | ✅                      | ✅                       |
+| Exponential ElGamal          | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  | ✅                      | ✅                       |
+| Elliptic Curve ElGamal       | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  | ✅                      | ✅                       |
+| Paillier                     | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  | ✅                      | ✅                       |
+| Elliptic Curve Paillier      | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  | ❌                      | ❌                       |
+| Damgard-Jurik                | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  | ✅                      | ✅                       |
+| Benaloh                      | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  | ❌                      | ❌                       |
+| Naccache-Stern               | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  | ❌                      | ❌                       |
+| Okamoto-Uchiyama             | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  | ❌                      | ❌                       |
+| Joye-Libert                  | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  | ❌                      | ❌                       |
+| Castagnos-Laguillaumie       | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  | ❌                      | ❌                       |
+| Damgard-Geisler-Kroigaard    | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ✅                          | ✅                   | ✅                  | ❌                      | ❌                       |
+| Bresson-Catalano-Pointcheval | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  | ❌                      | ❌                       |
+| Camenisch-Shoup              | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  | ❌                      | ✅                       |
+| Ishai-Paskin                 | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ✅                          | ❌                   | ❌                  | ❌                      | ❌                       |
+| Regev                        | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  | ❌                      | ❌                       |
+| Lyubashevsky-Peikert-Regev   | ❌                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  | ❌                      | ❌                       |
+| ML-KEM                       | ❌                              | ❌                        | ❌                    | ✅                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  | ❌                      | ❌                       |
+| Goldwasser-Micali            | ❌                              | ❌                        | ❌                    | ✅                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  | ❌                      | ❌                       |
+| Sander-Young-Yung            | ❌                              | ❌                        | ❌                    | ❌                      | ✅                      | ✅                            | ❌                          | ❌                   | ❌                  | ❌                      | ❌                       |
+| Boneh-Goh-Nissim             | 1️⃣                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  | ❌                      | ❌                       |
+| Freeman-Boneh-Goh-Nissim     | 1️⃣                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  | ❌                      | ❌                       |
+| Brakerski-Vaikuntanathan     | 1️⃣                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  | ❌                      | ❌                       |
+| Gentry-Halevi-Vaikuntanathan | 1️⃣                              | ✅                        | ✅                    | ❌                      | ❌                      | ✅                            | ❌                          | ❌                   | ❌                  | ❌                      | ❌                       |
+| Gentry-Sahai-Waters          | ✅                              | ❌                        | ❌                    | ✅                      | ✅                      | ✅                            | ❌                          | ❌                   | ❌                  | ❌                      | ❌                       |
 
 1️⃣ Boneh-Goh-Nissim, Freeman-Boneh-Goh-Nissim, Brakerski-Vaikuntanathan and Gentry-Halevi-Vaikuntanathan support one multiplication natively. Most additively homomorphic algorithms can support one multiplication with [Catalano-Fiore transform](#adding-multiplication-support-to-additive-algorithms) as well.
 
@@ -139,9 +143,12 @@ const algorithms = [
   'Camenisch-Shoup',
   'EllipticCurve-Paillier',
   'Regev',
+  'Lyubashevsky-Peikert-Regev',
+  'ML-KEM',
   'Brakerski-Vaikuntanathan',
   'Freeman-Boneh-Goh-Nissim',
   'Gentry-Halevi-Vaikuntanathan',
+  'Gentry-Sahai-Waters',
 ];
 
 const cs = new LightPHE({ algorithmName: algorithms[0] });
@@ -444,6 +451,158 @@ const encryptedClass = await serverCs.evaluateArgmax(
 console.assert(clientCs.decrypt(encryptedClass) === 1n);
 ```
 
+### Hyperplane and Naive Bayes Classifiers
+
+Together with [decision trees](#decision-trees), Damgard-Geisler-Kroigaard supports the classifiers of Bost et al. over encrypted data: hyperplane classifiers, e.g. logistic regression or linear SVM, and naive Bayes. The client encrypts its features, the server evaluates its private model on them, and finds the predicted class with [encrypted argmax](#encrypted-argmax). The client learns only the predicted class, and the server learns nothing about the features. Scores of classes must fit into about 30 bits, so floats must be quantized to integers.
+
+```typescript
+// client encrypts its features: income and debt in thousands, years of employment, late payments
+const clientCs = new LightPHE({ algorithmName: 'Damgard-Geisler-Kroigaard' });
+const encryptedFeatures = [85, 20, 6, 0].map((x) => clientCs.encrypt(x));
+
+// bank's logistic regression model, quantized by 1000: class 1 approves the loan
+const serverCs = new LightPHE({
+  algorithmName: 'Damgard-Geisler-Kroigaard',
+  keys: { public_key: clientCs.cs.keys.public_key },
+});
+const weights = [
+  [0, 0, 0, 0],
+  [42, -65, 310, -900],
+];
+const biases = [0, -1200];
+
+// absolute values of scores must be less than 2^bitLength
+const encryptedClass = await serverCs.evaluateHyperplane(
+  encryptedFeatures,
+  weights,
+  16,
+  clientCs.answerArgmax,
+  { biases }
+);
+console.assert(clientCs.decrypt(encryptedClass) === 1n);
+```
+
+Naive Bayes works with categorical features, which the client encrypts as one-hot vectors. The server quantizes the logarithms of its probabilities, which must be positive, e.g. smoothed with Laplace smoothing.
+
+```typescript
+// continuing with clientCs and serverCs above
+// patient encrypts symptoms: fever (no, yes), cough (none, dry, wet), fatigue (no, yes)
+const encryptedSymptoms = clientCs.encryptNaiveBayesInput([1, 1, 1], [2, 3, 2]);
+
+// clinic's model: P(diagnosis) and P(symptom | diagnosis) for cold, flu and allergy
+const priors = [0.36, 0.36, 0.28];
+const likelihoods = [
+  [
+    [0.71, 0.29],
+    [0.12, 0.25, 0.63],
+    [0.71, 0.29],
+  ],
+  [
+    [0.29, 0.71],
+    [0.12, 0.63, 0.25],
+    [0.29, 0.71],
+  ],
+  [
+    [0.83, 0.17],
+    [0.57, 0.29, 0.14],
+    [0.67, 0.33],
+  ],
+];
+const encryptedDiagnosis = await serverCs.evaluateNaiveBayes(
+  encryptedSymptoms,
+  priors,
+  likelihoods,
+  clientCs.answerArgmax
+);
+
+// patient learns only the most likely diagnosis: flu
+console.assert(clientCs.decrypt(encryptedDiagnosis) === 1n);
+```
+
+Scenarios:
+
+- A customer applies for a loan from a mobile app, and the bank runs its credit scoring model on the encrypted income and debts, so the customer learns only whether the loan is approved, and the bank neither reveals its model nor sees the financial details before the customer agrees to share them.
+- A patient checks symptoms with an online clinic, whose diagnosis model was trained on years of patient records, so the patient learns the most likely diagnosis without revealing the symptoms, and the clinic does not give away its model.
+- An email client asks a spam filtering service whether a message is spam, and the service classifies the encrypted word counts of the message, so it never reads the email.
+
+### Encrypted Nearest Neighbor Search
+
+`lightphe-ts` can find the k nearest vectors to an encrypted query, e.g. searching a face embedding in a gallery, without revealing the query. Embeddings must be quantized to integers first, e.g. by scaling and rounding. There are two settings.
+
+If the server owns the gallery in plain, the client encrypts its query with Damgard-Geisler-Kroigaard, and the server finds the nearest vectors with [encrypted argmax](#encrypted-argmax). The server learns neither the query nor the result, and the client learns only the indices or labels of the k nearest vectors, neither the distances nor the other vectors.
+
+```typescript
+// client encrypts its face embedding, quantized to integers
+const clientCs = new LightPHE({ algorithmName: 'Damgard-Geisler-Kroigaard' });
+const encryptedQuery = clientCs.encryptKnnQuery([12, -7, 33, 5]);
+
+// server finds the 2 nearest vectors of its gallery - squared distances must fit into bitLength bits
+const serverCs = new LightPHE({
+  algorithmName: 'Damgard-Geisler-Kroigaard',
+  keys: { public_key: clientCs.cs.keys.public_key },
+});
+const gallery = [
+  [10, -5, 30, 4],
+  [-40, 22, 1, 9],
+  [13, -8, 35, 6],
+];
+const people = [101, 102, 103];
+const result = await serverCs.evaluateKnn(
+  encryptedQuery,
+  gallery,
+  2,
+  16,
+  clientCs.answerKnn,
+  { labels: people }
+);
+
+// client learns only who the nearest people are
+const nearest = result.labels!.map((label) => clientCs.decrypt(label));
+console.assert(nearest.join() === '103,101');
+```
+
+If the gallery itself is stored in an untrusted cloud, the owner encrypts both the gallery and its queries with the [Catalano-Fiore](#adding-multiplication-support-to-additive-algorithms) boost. The cloud computes encrypted squared distances with the public key only, and the owner decrypts them to find the nearest vectors. The cloud learns nothing.
+
+```typescript
+// owner encrypts its gallery once, uploads it, and then encrypts queries
+const ownerCs = new LightPHE({
+  algorithmName: 'Paillier',
+  boost: 'Catalano-Fiore',
+});
+const gallery = [
+  [10, -5, 30, 4],
+  [-40, 22, 1, 9],
+  [13, -8, 35, 6],
+];
+const encryptedGallery = gallery.map((vector) =>
+  vector.map((x) => ownerCs.encrypt(x))
+);
+const encryptedQuery = [12, -7, 33, 5].map((x) => ownerCs.encrypt(x));
+
+// cloud computes encrypted distances with the public key only
+const cloudCs = new LightPHE({
+  algorithmName: 'Paillier',
+  keys: { public_key: ownerCs.cs.keys.public_key },
+  boost: 'Catalano-Fiore',
+});
+const encryptedDistances = cloudCs.evaluateKnnDistances(
+  encryptedQuery,
+  encryptedGallery
+);
+
+// owner decrypts them and finds the nearest vectors
+console.assert(
+  ownerCs.decryptKnn(encryptedDistances, 2).indices.join() === '2,0'
+);
+```
+
+Scenarios:
+
+- A user unlocks a door by face, and the building's server matches the encrypted face embedding against its gallery of employees, so the server never sees the user's face and the user learns only whether they are recognized, not who else is enrolled.
+- A bank checks whether a new customer's encrypted face embedding matches anyone on a sanctions list held by a screening provider, so the provider does not learn the customer and the bank does not get the list.
+- A company keeps the face embeddings of its employees in a public cloud, and searches them with encrypted queries, so a breach of the cloud reveals neither the gallery nor the queries.
+- A retailer recommends products by finding the nearest items to a user's encrypted preference vector, so the server does not learn the user's taste.
+
 ### Master Key Decryption
 
 Bresson-Catalano-Pointcheval has two ways to decrypt a ciphertext. Each user decrypts with its own private key, while an authority holding the master key decrypts ciphertexts of all users. For instance, a company can let every employee encrypt with their own key, and still recover the data if an employee leaves. Keep in mind that the master key holder can read everything by design.
@@ -481,7 +640,400 @@ console.assert(authorityCs.decryptWithMasterKey(aliceCiphertext) === 150n);
 console.assert(authorityCs.decryptWithMasterKey(bobCiphertext) === 200n);
 ```
 
-### Verifiable Encryption
+### Threshold Decryption
+
+ElGamal, Exponential ElGamal, Elliptic Curve ElGamal, Paillier and Damgard-Jurik support threshold decryption. ElGamal and Exponential ElGamal keys must be generated with `primeOrder: true` for this. A dealer splits the private key into shares, and any `threshold` of `parties` shareholders decrypt a ciphertext together, whereas fewer shareholders learn nothing. For instance, a board of 5 directors can let any 3 of them decrypt the company's encrypted data, so neither a single director can read it alone nor losing 2 of them blocks access.
+
+```typescript
+// dealer splits the private key into 5 shares, any 3 of them can decrypt
+const dealerCs = new LightPHE({ algorithmName: 'Paillier' });
+const shareKeys = dealerCs.generateThresholdKeys(3, 5);
+
+// dealer forgets the private key, and publishes the public key with threshold parameters
+dealerCs.exportKeys('public.txt', true);
+
+// each share key is sent to its own shareholder secretly
+const shareholders = shareKeys.map(
+  (keys) => new LightPHE({ algorithmName: 'Paillier', keys })
+);
+
+// anyone encrypts and computes homomorphically with the public key
+const publicCs = new LightPHE({
+  algorithmName: 'Paillier',
+  keyFile: 'public.txt',
+});
+const c = publicCs.encrypt(100).add(publicCs.encrypt(50));
+
+// any 3 shareholders decrypt partially, a single partial decryption reveals nothing
+const partials = [0, 2, 4].map((i) => shareholders[i].partialDecrypt(c));
+
+// anyone having the public key combines partial decryptions
+console.assert(publicCs.combinePartialDecryptions(c, partials) === 150n);
+```
+
+The dealer knows the private key while splitting it, so it must be trusted. By default, partial decryptions are not proven, so a cheating shareholder can cause a wrong plaintext silently. [Proof of partial decryption](#proof-of-partial-decryption) prevents this.
+
+### Secure Aggregation for Federated Learning
+
+In federated learning, clients train a model on their private data and send only model updates to a server, but updates can still leak the data. `lightphe-ts` lets clients encrypt their updates, the server sum them without decrypting, and a committee holding shares of the private key decrypt only the sum with [threshold decryption](#threshold-decryption). Updates are quantized with the precision of the cryptosystem, and many values are packed into a single ciphertext, so a client encrypts one ciphertext per chunk instead of one per value. With 1024-bit keys, 40 values fit into a ciphertext, and encrypting an update of 1000 values takes about 0.3 seconds instead of 13 seconds without packing. Paillier and Damgard-Jurik support this.
+
+```typescript
+// dealer splits the key among a committee of 5, any 3 of them can decrypt
+const dealerCs = new LightPHE({ algorithmName: 'Paillier', safePrimes: true });
+const shareKeys = dealerCs.generateThresholdKeys(3, 5);
+const committee = shareKeys.map(
+  (keys) => new LightPHE({ algorithmName: 'Paillier', keys })
+);
+const publicKey = { public_key: dealerCs.cs.keys.public_key };
+
+// each client encrypts its update with the public key - values must be in [-maxValue, maxValue]
+const clientCs = new LightPHE({ algorithmName: 'Paillier', keys: publicKey });
+const updates = [
+  [0.12, -0.53, 0.98],
+  [0.33, 0.21, -0.47],
+  [-0.25, 0.08, 0.61],
+];
+const encryptedUpdates = updates.map((update) =>
+  clientCs.encryptUpdate(update, 1, 100)
+);
+
+// server sums encrypted updates without decrypting them
+const serverCs = new LightPHE({ algorithmName: 'Paillier', keys: publicKey });
+const encryptedSum = serverCs.aggregateUpdates(encryptedUpdates);
+
+// any 3 members decrypt the sum only, and prove their partial decryptions
+const partials = committee
+  .slice(0, 3)
+  .map((member) =>
+    member.partialDecryptAggregate(encryptedSum, { prove: true })
+  );
+const result = serverCs.combineAggregate(encryptedSum, partials, {
+  verify: true,
+});
+
+console.assert(
+  result.mean.map((x) => x.toFixed(2)).join() === '0.07,-0.08,0.37'
+);
+```
+
+The arguments of `encryptUpdate` are the update, `maxValue` and `maxClients`. `maxClients` reserves room in each slot, so that the sum of that many updates never overflows into the next value, and the server refuses to sum more. Clients must use the same key, length, precision, `maxValue` and `maxClients`. Updates of dropped clients are simply not summed, and the sum can still be decrypted if up to 2 committee members drop out.
+
+Scenarios:
+
+- Hospitals train a model to detect tumors on their own scans, and a central server averages their encrypted model updates, so neither the server nor the other hospitals see any hospital's update, which could leak information about its patients.
+- A keyboard app improves next-word prediction from millions of phones, and a committee of independent organizations decrypts only the average update of each round, so no single party, including the app maker, can inspect the update of a particular phone.
+- Banks build a shared fraud detection model, and verified partial decryptions stop a dishonest committee member from slipping a manipulated average into the shared model.
+
+### Zero-Knowledge Proofs
+
+`lightphe-ts` lets you prove facts about ciphertexts and decryptions without revealing the plaintexts or the private key, and anyone having the public key can verify them. For instance, a voter proves that a ballot is 0 or 1, an employee proves that an encrypted salary is in a sensible range, and an authority proves that the announced tally is really what the encrypted tally contains. Proofs are interoperable with the Python library.
+
+| Algorithm              | Proof of<br>Decryption | Proof of<br>Partial Decryption | Proof of<br>Knowledge | Proof of<br>Allowed Values | Proof of<br>Range | E-Voting | Verifiable<br>Encryption |
+| ---------------------- | ---------------------- | ------------------------------ | --------------------- | -------------------------- | ----------------- | -------- | ------------------------ |
+| ElGamal                | ✅                     | ✅                             | ✅                    | ❌                         | ❌                | ❌       | ❌                       |
+| Exponential ElGamal    | ✅                     | ✅                             | ✅                    | ✅                         | ✅                | ✅       | ❌                       |
+| Elliptic Curve ElGamal | ✅                     | ✅                             | ✅                    | ✅                         | ✅                | ✅       | ❌                       |
+| Paillier               | ✅                     | ✅                             | ✅                    | ✅                         | ✅                | ✅       | ❌                       |
+| Damgard-Jurik          | ✅                     | ✅                             | ✅                    | ✅                         | ✅                | ✅       | ❌                       |
+| Camenisch-Shoup        | ❌                     | ❌                             | ❌                    | ❌                         | ❌                | ❌       | ✅                       |
+
+ElGamal and Exponential ElGamal keys must be generated with `primeOrder: true` for proofs. Paillier and Damgard-Jurik keys must be generated with `safePrimes: true` for proof of partial decryption.
+
+#### Proof of Decryption
+
+The private key owner can prove that a ciphertext decrypts to a plaintext, and anyone can check it with the public key only. ElGamal family uses a Chaum-Pedersen zero-knowledge proof, so the private key is never revealed. Paillier and Damgard-Jurik reveal the randomness of the ciphertext instead, which proves the plaintext and reveals nothing about the private key or other ciphertexts.
+
+```typescript
+// private key owner builds the cryptosystem and publishes its public key
+const cs = new LightPHE({
+  algorithmName: 'Exponential-ElGamal',
+  primeOrder: true,
+});
+cs.exportKeys('public.txt', true);
+const publicCs = new LightPHE({
+  algorithmName: 'Exponential-ElGamal',
+  keyFile: 'public.txt',
+});
+
+const c = publicCs.encrypt(17).add(publicCs.encrypt(25));
+
+// private key owner decrypts with a proof
+const [plaintext, proof] = cs.decryptWithProof(c);
+
+// anyone verifies it with public key only
+console.assert(publicCs.verifyDecryption(c, plaintext, proof) === true);
+console.assert(publicCs.verifyDecryption(c, plaintext + 1n, proof) === false);
+```
+
+Scenarios:
+
+- An election authority announces that 5,000 of 8,000 encrypted ballots are yes, and publishes a proof, so every voter can check that the announced result is really what the encrypted tally contains without trusting the authority.
+- A cloud service computes the average salary over encrypted payroll data of a client company and decrypts it with a proof, so an external auditor can confirm that the reported average was not altered on its way to the board.
+- A bank publishes the decrypted total of a day's encrypted transactions together with a proof, so a regulator can verify the total without being given the bank's private key or the individual transactions.
+
+#### Proof of Partial Decryption
+
+In [threshold decryption](#threshold-decryption), a cheating shareholder can send a wrong partial decryption and cause a wrong plaintext silently. A cheating shareholder can even shift the result by any amount it chooses, e.g. add 50 votes to a party, because lagrange coefficients of other shareholders are public. Shareholders can opt in to prove that their partial decryptions are computed with their own shares, and the combiner can opt in to verify them. Then, invalid or unproven partial decryptions are discarded. Paillier and Damgard-Jurik keys must be generated with `safePrimes: true` for this, e.g. `new LightPHE({ algorithmName: 'Paillier', safePrimes: true })`.
+
+```typescript
+// dealer splits the private key into 3 shares, any 2 of them can decrypt
+const dealerCs = new LightPHE({
+  algorithmName: 'Exponential-ElGamal',
+  primeOrder: true,
+});
+const shareKeys = dealerCs.generateThresholdKeys(2, 3);
+const shareholders = shareKeys.map(
+  (keys) => new LightPHE({ algorithmName: 'Exponential-ElGamal', keys })
+);
+
+const c = dealerCs.encrypt(42);
+
+// shareholders opt in to prove their partial decryptions
+const partials = shareholders.map((shareholder) =>
+  shareholder.partialDecrypt(c, { prove: true })
+);
+
+// anyone verifies a partial decryption with public key only, e.g. to find a cheating shareholder
+console.assert(dealerCs.verifyPartialDecryption(c, partials[0]) === true);
+
+// combiner opts in to verify partial decryptions while combining them
+console.assert(
+  dealerCs.combinePartialDecryptions(c, partials, { verify: true }) === 42n
+);
+```
+
+Scenarios:
+
+- Three trustees nominated by competing parties decrypt an election tally together, so a trustee who tries to add 50 votes to its own party by tampering with its partial decryption is detected and outvoted by the honest two.
+- Five hospitals hold shares of a key protecting encrypted patient statistics, and any three of them decrypt the yearly average together, so a single hospital cannot quietly bias the published average in its favor.
+- Servers of a federated learning committee decrypt the sum of encrypted model updates from thousands of phones, so a compromised server cannot slip a poisoned update into the global model without being caught.
+- Two of three auditors are required to open the total of a company's encrypted transactions, so an auditor bribed to hide a loss cannot misreport the total.
+
+#### Proof of Knowledge
+
+Anyone having the public key can encrypt a value and prove knowledge of it, without revealing it. Otherwise, someone could copy another one's ciphertext, re-randomize it or modify it homomorphically, and submit it as their own without knowing the plaintext. The proof is bound to the ciphertext and a context such as the id of the encryptor.
+
+```typescript
+const cs = new LightPHE({ algorithmName: 'Paillier' });
+
+// alice submits her sealed bid with a proof of knowledge
+const [aliceBid, aliceProof] = cs.encryptWithProofOfKnowledge(950, {
+  context: 'alice',
+});
+console.assert(
+  cs.verifyKnowledge(aliceBid, aliceProof, { context: 'alice' }) === true
+);
+
+// mallory outbids alice by adding 1 to her encrypted bid without knowing it, but cannot prove it
+const malloryBid = aliceBid.add(cs.encrypt(1));
+console.assert(
+  cs.verifyKnowledge(malloryBid, aliceProof, { context: 'mallory' }) === false
+);
+```
+
+Scenarios:
+
+- In a sealed-bid auction, Mallory sees Alice's encrypted bid and submits it plus 1 to win by the smallest margin without knowing the amount, but she cannot prove knowledge of that bid, so her submission is rejected.
+- On a crowdfunding platform, a backer cannot copy a large encrypted pledge of another backer and scale it to look generous, because each pledge must come with a proof that its owner knows the amount.
+- In an encrypted employee survey, a participant cannot re-randomize a colleague's encrypted answer and submit it as their own to double its weight, because a re-randomized copy cannot be proven.
+
+#### Proof of Allowed Values
+
+Anyone having the public key can encrypt a value and prove that it is one of the allowed values, without revealing which one. The proof is bound to a context such as the id of the encryptor, so a copied ciphertext with its proof is rejected for another context.
+
+```typescript
+const cs = new LightPHE({ algorithmName: 'Paillier' });
+
+// a customer rates a product from 1 to 5 stars, and proves it without revealing the rating
+const values = [1, 2, 3, 4, 5];
+const [rating, proof] = cs.encryptWithProof(4, {
+  values,
+  context: 'customer-42',
+});
+
+// anyone verifies it with public key only
+console.assert(
+  cs.verifyCiphertext(rating, proof, { values, context: 'customer-42' }) ===
+    true
+);
+console.assert(
+  cs.verifyCiphertext(rating, proof, { values, context: 'customer-43' }) ===
+    false
+);
+```
+
+Scenarios:
+
+- An online shop collects encrypted product ratings, and each customer proves that the rating is between 1 and 5 stars, so nobody can submit a rating of 1,000 to push the average up while individual ratings stay private.
+- A company runs an anonymous satisfaction survey with answers from 1 (poor) to 4 (excellent), and each employee proves that the encrypted answer is one of them, so the average satisfaction is computed homomorphically and a malformed answer cannot corrupt it.
+- In [e-voting](#e-voting), each voter proves that the ballot is 0 or 1, so nobody can cast a vote of 100 in the homomorphic tally without revealing how they voted.
+
+#### Proof of Range
+
+Anyone having the public key can encrypt a value and prove that it is in `[low, high]`, without revealing it. Proof size grows with the bit length of `high - low`.
+
+```typescript
+const cs = new LightPHE({ algorithmName: 'Paillier' });
+
+// an employee proves that the encrypted salary is in [0, 500000], so cannot skew the average
+const [salary, proof] = cs.encryptWithRangeProof(85000, 0, 500000, {
+  context: 'alice',
+});
+
+// anyone verifies it with public key only
+console.assert(
+  cs.verifyRange(salary, proof, 0, 500000, { context: 'alice' }) === true
+);
+console.assert(
+  cs.verifyRange(salary, proof, 0, 50000, { context: 'alice' }) === false
+);
+```
+
+Scenarios:
+
+- In an industry salary survey, each employee encrypts the salary with a proof that it is between 0 and 500,000, so a single participant cannot submit a negative or a billion-dollar salary to skew the published average.
+- A website requires visitors to be adults, and a visitor proves that the encrypted age is between 18 and 120 without revealing the exact age or birth date.
+- In a participatory budget, each citizen allocates up to 1,000 to public projects in encrypted form, so allocations are proven to be within the cap while individual preferences stay private.
+- A lender accepts an encrypted credit score with a proof that it is between 650 and 850, so the applicant shows eligibility without revealing the exact score.
+
+#### E-Voting
+
+[Proof of allowed values](#proof-of-allowed-values) makes e-voting possible. Each voter proves that a ballot is 0 or 1, so cannot cast a vote of 100 in the homomorphic tally. The proof is bound to the id of the voter, so a copied ballot is rejected. Then, the authority decrypts the tally with a [proof of decryption](#proof-of-decryption).
+
+```typescript
+// authority builds the cryptosystem and publishes its public key
+const authorityCs = new LightPHE({
+  algorithmName: 'Exponential-ElGamal',
+  primeOrder: true,
+});
+authorityCs.exportKeys('public.txt', true);
+const publicCs = new LightPHE({
+  algorithmName: 'Exponential-ElGamal',
+  keyFile: 'public.txt',
+});
+
+// each voter encrypts a vote of 0 or 1 with a proof, having the public key only
+const [aliceBallot, aliceProof] = publicCs.encryptWithProof(1, {
+  context: 'alice',
+});
+const [bobBallot, bobProof] = publicCs.encryptWithProof(0, { context: 'bob' });
+
+// anyone verifies ballots without decrypting them
+console.assert(
+  publicCs.verifyCiphertext(aliceBallot, aliceProof, { context: 'alice' })
+);
+console.assert(
+  publicCs.verifyCiphertext(bobBallot, bobProof, { context: 'bob' })
+);
+
+// mallory's copy of alice's ballot is rejected
+console.assert(
+  !publicCs.verifyCiphertext(aliceBallot, aliceProof, { context: 'mallory' })
+);
+
+// valid ballots are tallied homomorphically, and the authority decrypts the tally with a proof
+const tally = aliceBallot.add(bobBallot);
+const [result, proof] = authorityCs.decryptWithProof(tally);
+console.assert(publicCs.verifyDecryption(tally, result, proof));
+console.assert(result === 1n);
+```
+
+For an election of parties, a vote for party `k` can be encrypted as `base^k`, so the tally keeps the votes of each party in its own digit in that base. The proof guarantees that a voter votes once for exactly one party. `base` must be greater than the votes a party can get, e.g. 100 allows up to 99 votes per party, and `base^parties` must be less than the modulus. Paillier fits here, as the tally is a large number.
+
+```typescript
+// authority builds the cryptosystem and publishes its public key
+const authorityCs = new LightPHE({ algorithmName: 'Paillier' });
+authorityCs.exportKeys('public.txt', true);
+const publicCs = new LightPHE({
+  algorithmName: 'Paillier',
+  keyFile: 'public.txt',
+});
+
+// a vote for party k is encrypted as 100^k, i.e. 1 for red, 100 for green and 10000 for blue
+const parties = ['red', 'green', 'blue'];
+const values = parties.map((_, k) => 100n ** BigInt(k));
+
+// each voter encrypts a vote for one party with a proof
+const ballots = [
+  ['alice', 'red'],
+  ['bob', 'blue'],
+  ['carol', 'red'],
+].map(([voter, party]) => {
+  const [ballot, proof] = publicCs.encryptWithProof(
+    values[parties.indexOf(party)],
+    { values, context: voter }
+  );
+  // anyone verifies ballots without decrypting them
+  console.assert(
+    publicCs.verifyCiphertext(ballot, proof, { values, context: voter })
+  );
+  return ballot;
+});
+
+// valid ballots are tallied homomorphically, and the authority decrypts the tally with a proof
+const tally = ballots.reduce((sum, ballot) => sum.add(ballot));
+const [result, proof] = authorityCs.decryptWithProof(tally);
+console.assert(publicCs.verifyDecryption(tally, result, proof));
+
+// tally is 2 x 1 + 0 x 100 + 1 x 10000 = 10002, read 2 digits at a time from right: 1 | 00 | 02
+const votes = parties.map((_, k) => (result / 100n ** BigInt(k)) % 100n);
+console.assert(votes.join() === '2,0,1');
+```
+
+Alternatively, for an election of many parties, each voter casts a one-hot ballot, i.e. one ciphertext per party where only the chosen party is 1, with a proof that exactly one party is chosen. Summing ballots slot by slot counts the votes of each party separately, so the number of parties is not limited.
+
+```typescript
+// authority builds the cryptosystem and publishes its public key
+const authorityCs = new LightPHE({
+  algorithmName: 'Exponential-ElGamal',
+  primeOrder: true,
+});
+authorityCs.exportKeys('public.txt', true);
+const publicCs = new LightPHE({
+  algorithmName: 'Exponential-ElGamal',
+  keyFile: 'public.txt',
+});
+
+const parties = ['red', 'green', 'blue', 'yellow'];
+
+// each voter encrypts a vote for one party as a one-hot ballot with a proof
+const ballots = [
+  ['alice', 'red'],
+  ['bob', 'blue'],
+  ['carol', 'red'],
+].map(([voter, party]) => {
+  const [ballot, proof] = publicCs.encryptOneHot(
+    parties.indexOf(party),
+    parties.length,
+    { context: voter }
+  );
+  // anyone verifies ballots without decrypting them
+  console.assert(publicCs.verifyOneHot(ballot, proof, { context: voter }));
+  return ballot;
+});
+
+// valid ballots are summed slot by slot, so each party's votes are counted in its own ciphertext
+const tally = ballots.reduce((sums, ballot) =>
+  sums.map((sum, i) => sum.add(ballot[i]))
+);
+
+// authority decrypts the count of each party with a proof
+const votes = tally.map((count) => {
+  const [result, proof] = authorityCs.decryptWithProof(count);
+  console.assert(publicCs.verifyDecryption(count, result, proof));
+  return result;
+});
+console.assert(votes.join() === '2,0,1,0');
+```
+
+Scenarios:
+
+- A city runs a referendum on a new park, and every resident casts an encrypted yes or no ballot with a proof, so the city announces the result with a proof of decryption while nobody, including the city, learns how an individual voted.
+- A national election of a few parties encrypts a vote for party k as `base^k`, so a single homomorphic sum and a single decryption reveal the votes of every party at once.
+- A national election of dozens of parties uses one-hot ballots of `encryptOneHot` and `verifyOneHot`, so each party's votes are counted in its own ciphertext and the number of parties is not limited.
+- Shareholders of a company vote on the board's proposals, and three independent trustees decrypt the tally with [threshold decryption](#threshold-decryption) and [proof of partial decryption](#proof-of-partial-decryption), so no single trustee can read or alter the result.
+
+#### Verifiable Encryption
 
 Camenisch-Shoup lets you encrypt a secret for someone else and prove that the ciphertext really contains it, without revealing the secret. For instance, Alice can escrow the private key of her crypto wallet with a trusted third party. A bank, which knows only her public key, verifies that the escrowed ciphertext contains its private key, and the trusted third party can recover it only under the conditions written in the label.
 
@@ -517,6 +1069,12 @@ console.assert(ttpCs.decryptVerifiableCiphertext(escrow, label) === privateKey);
 ```
 
 Private keys of other curves can be escrowed by passing `form` and `curve` options while building the cryptosystem. Verifiable ciphertexts reject any modification, so homomorphic operations are applied to regular ciphertexts created with `encrypt`. Proofs are interoperable with the Python library.
+
+Scenarios:
+
+- Alice escrows the private key of her crypto wallet with a trusted third party, and her bank verifies that the escrow really contains the key before granting her a loan, without ever seeing the key.
+- A company escrows the encryption keys of its employees with a recovery service, so an auditor can verify that every key is recoverable if an employee leaves, while neither the auditor nor the service can use the keys under normal conditions.
+- A crypto exchange verifies that a customer's key is escrowed under conditions agreed with a regulator, e.g. release only with a court order, without learning the key itself.
 
 ### Adding Multiplication Support to Additive Algorithms
 
@@ -556,7 +1114,7 @@ Boosted ciphertexts are `CatalanoFioreCiphertext` objects supporting `add`, `sub
 
 ### Post-Quantum Security
 
-Most algorithms in `lightphe-ts` rely on factoring or discrete logarithm problems, which a large enough quantum computer could solve with Shor's algorithm. Regev and Brakerski-Vaikuntanathan rely on learning with errors problems instead, which are believed to be hard for quantum computers too. Their default key sizes give about 128-bit security against quantum attacks.
+Most algorithms in `lightphe-ts` rely on factoring or discrete logarithm problems, which a large enough quantum computer could solve with Shor's algorithm. Regev, Lyubashevsky-Peikert-Regev, ML-KEM, Brakerski-Vaikuntanathan and Gentry-Sahai-Waters rely on learning with errors problems instead, which are believed to be hard for quantum computers too. Their default key sizes give about 128-bit security against quantum attacks.
 
 Regev is additively homomorphic. Its key size is the lattice dimension, and its default is 2048.
 
@@ -568,6 +1126,32 @@ const c2 = cs.encrypt(2500);
 
 console.assert(cs.decrypt(c1.add(c2)) === 4000n);
 console.assert(cs.decrypt(c1.multiply(3)) === 4500n);
+```
+
+Lyubashevsky-Peikert-Regev is Regev over a polynomial ring, so its security relies on the ring learning with errors problem like Brakerski-Vaikuntanathan. Its random matrix is replaced by a single polynomial, so it generates keys and encrypts many times faster than Regev with the same key and ciphertext sizes. Its key size is the degree of its polynomial ring, and its default is 2048.
+
+```typescript
+const cs = new LightPHE({ algorithmName: 'Lyubashevsky-Peikert-Regev' });
+
+const c1 = cs.encrypt(1500);
+const c2 = cs.encrypt(2500);
+
+console.assert(cs.decrypt(c1.add(c2)) === 4000n);
+console.assert(cs.decrypt(c1.multiply(3)) === 4500n);
+```
+
+ML-KEM uses the parameter sets standardized by NIST in FIPS 203: ML-KEM-512, ML-KEM-768 and ML-KEM-1024. It is homomorphic with respect to the exclusive or of 256-bit messages like Goldwasser-Micali. Its key size is the parameter set, and its default is 768. Notice that this is the CPA secure public key encryption K-PKE inside ML-KEM, without ciphertext compression and without the transform that makes ML-KEM CCA secure, because a CCA secure scheme cannot be homomorphic. So, it is not a FIPS 203 compliant ML-KEM implementation, and its keys and ciphertexts are not interoperable with other libraries. Its modulus is small, so only a few ciphertexts can be combined: exclusive or of 6 ciphertexts fails with a probability of about 2^-50 for ML-KEM-768.
+
+```typescript
+const cs = new LightPHE({ algorithmName: 'ML-KEM' });
+
+const m1 = 0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdefn;
+const m2 = 0xfedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321n;
+
+const c1 = cs.encrypt(m1);
+const c2 = cs.encrypt(m2);
+
+console.assert(cs.decrypt(c1.xor(c2)) === (m1 ^ m2));
 ```
 
 Brakerski-Vaikuntanathan additionally supports one multiplication of ciphertexts like Boneh-Goh-Nissim, but without pairings. Its key size is the degree of its polynomial ring, and its default is 4096.
@@ -586,7 +1170,19 @@ console.assert(
 );
 ```
 
-Every ciphertext of these algorithms carries a small noise, which grows with each homomorphic operation, and decryption silently fails once it grows too much. With default settings, plaintexts must be less than 2^24. Regev has room for thousands of additions or multiplications with constants up to a few thousands, and a product of Brakerski-Vaikuntanathan has room for millions of times more noise. You can increase the plaintext space with the `plaintextLimit` option in exchange of less room for noise. Floats and tensors are not supported.
+Gentry-Sahai-Waters encrypts bits, and supports both exclusive or and and, so boolean circuits can be evaluated on encrypted bits with more than one multiplication. Exclusive or is almost free. Products of products work up to a multiplicative depth of 2, e.g. `a.and(b).and(c.and(d))`, whereas chains like `acc = acc.and(fresh)`, e.g. carries of a ripple carry adder, can be very long because each step adds a small fixed noise. Its key size is the degree of its polynomial ring, and its default is 2048. Encrypting a bit takes about 0.4 seconds, an and takes about 0.3 seconds, and a ciphertext is about 256 KB.
+
+```typescript
+const cs = new LightPHE({ algorithmName: 'Gentry-Sahai-Waters' });
+
+const [a, b, c, d] = [1, 1, 0, 1].map((bit) => cs.encrypt(bit));
+
+// majority of three bits, and a product of products
+console.assert(cs.decrypt(a.and(b).xor(a.and(c)).xor(b.and(c))) === 1n);
+console.assert(cs.decrypt(a.and(b).and(c.and(d))) === 0n);
+```
+
+Every ciphertext of these algorithms carries a small noise, which grows with each homomorphic operation, and decryption silently fails once it grows too much. With default settings, plaintexts must be less than 2^24. Regev and Lyubashevsky-Peikert-Regev have room for thousands of additions or multiplications with constants up to a few thousands, and a product of Brakerski-Vaikuntanathan has room for millions of times more noise. You can increase the plaintext space with the `plaintextLimit` option in exchange of less room for noise. Floats and tensors are not supported.
 
 ### Vector Embeddings
 
