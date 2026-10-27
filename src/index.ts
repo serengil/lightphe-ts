@@ -7,12 +7,18 @@
 
 import * as fs from 'fs';
 
+import * as classifiers from './commons/classifiers.js';
 import { validateKeys } from './commons/keyValidator.js';
 import { deserializeKeys, serializeKeys } from './commons/keySerializer.js';
 import { Logger } from './commons/logger.js';
-import { mod, ZERO } from './commons/mathUtils.js';
+import { mod, ONE, ZERO } from './commons/mathUtils.js';
+import * as nearestNeighbors from './commons/nearestNeighbors.js';
 import { fractionize, normalizeInput } from './commons/pheUtils.js';
+import * as secureAggregation from './commons/secureAggregation.js';
+import * as thresholdUtils from './commons/threshold.js';
+import * as zkp from './commons/zkp.js';
 import { buildCryptosystem, type BuildOptions } from './cryptosystems/index.js';
+import { GSW_FLOAT_NOT_SUPPORTED_MSG } from './cryptosystems/GentrySahaiWaters.js';
 import { FLOAT_NOT_SUPPORTED_MSG } from './cryptosystems/JoyeLibert.js';
 import type { CurveForm, EllipticCurvePoint } from './ecc/index.js';
 import { Algorithm, type AlgorithmName } from './models/Algorithm.js';
@@ -33,8 +39,14 @@ import type {
   CiphertextValue,
   DecisionTree,
   DecisionTreeServerState,
+  DecryptionProof,
   Keys,
+  KnowledgeProof,
+  MembershipProof,
   NumericDecisionTree,
+  OneHotProof,
+  PartialDecryption,
+  RangeProof,
   VerifiableCiphertext,
 } from './models/types.js';
 
@@ -49,7 +61,56 @@ const TENSOR_NOT_SUPPORTED_ALGORITHMS: readonly string[] = [
   Algorithm.BrakerskiVaikuntanathan,
   Algorithm.FreemanBonehGohNissim,
   Algorithm.GentryHaleviVaikuntanathan,
+  Algorithm.LyubashevskyPeikertRegev,
+  Algorithm.MLKEM,
 ];
+
+/** Partial decryption of a fraction of an encrypted tensor. */
+export interface TensorPartialDecryption {
+  abs_dividend: PartialDecryption;
+  divisor: PartialDecryption;
+}
+
+/** Encrypted query of encrypted k nearest neighbor search. */
+export interface EncryptedKnnQuery {
+  /** Encrypted entries of the query vector. */
+  query: Ciphertext[];
+  /** Encrypted squared norm of the query vector. */
+  norm: Ciphertext;
+}
+
+/** Encrypted result of encrypted k nearest neighbor search. */
+export interface KnnResult {
+  /** Encrypted indices of the k nearest vectors from the nearest one. */
+  indices: Ciphertext[];
+  /** Encrypted labels of the k nearest vectors, if labels are set. */
+  labels?: Ciphertext[];
+}
+
+/** An encrypted model update, or an encrypted sum of model updates. */
+export interface EncryptedUpdate {
+  /** Ciphertexts of chunks of packed values. */
+  chunks: Ciphertext[];
+  /** Layout of packing. */
+  layout: secureAggregation.PackingLayout;
+  /** Number of updates it contains. */
+  count: number;
+}
+
+/** Decrypted sum and mean of model updates. */
+export interface Aggregate {
+  sum: number[];
+  mean: number[];
+  count: number;
+}
+
+/** Reports whether a value is an integer, either a bigint or an integral number. */
+function isInteger(value: unknown): value is number | bigint {
+  return (
+    typeof value === 'bigint' ||
+    (typeof value === 'number' && Number.isInteger(value))
+  );
+}
 
 /** Ciphertexts `encrypt` returns, depending on the boost option. */
 export type BoostedCiphertext<Boost> = Boost extends typeof CATALANO_FIORE
@@ -78,7 +139,8 @@ export interface LightPHEOptions<
    * Castagnos-Laguillaumie | Ishai-Paskin | Damgard-Geisler-Kroigaard |
    * Bresson-Catalano-Pointcheval | Camenisch-Shoup | EllipticCurve-Paillier |
    * Regev | Brakerski-Vaikuntanathan | Freeman-Boneh-Goh-Nissim |
-   * Gentry-Halevi-Vaikuntanathan */
+   * Gentry-Halevi-Vaikuntanathan | Lyubashevsky-Peikert-Regev | ML-KEM |
+   * Gentry-Sahai-Waters */
   algorithmName: AlgorithmName | string;
 
   /** An existing private/public key pair to use instead of generating one. */
@@ -89,9 +151,11 @@ export interface LightPHEOptions<
 
   /**
    * Key size in bits. For Regev, it is the lattice dimension. For
-   * Brakerski-Vaikuntanathan, it is the ring degree. For
-   * Freeman-Boneh-Goh-Nissim, it is the bit length of the field size. For
-   * Gentry-Halevi-Vaikuntanathan, it is the lattice dimension in [2, 8].
+   * Brakerski-Vaikuntanathan, Lyubashevsky-Peikert-Regev and
+   * Gentry-Sahai-Waters, it is the ring degree. For ML-KEM, it is the
+   * parameter set: 512, 768 or 1024. For Freeman-Boneh-Goh-Nissim, it is the
+   * bit length of the field size. For Gentry-Halevi-Vaikuntanathan, it is the
+   * lattice dimension in [2, 8].
    */
   keySize?: number | null;
 
@@ -118,7 +182,8 @@ export interface LightPHEOptions<
   /**
    * Upper bound for plaintext values. Only used when `algorithmName` is
    * `Benaloh`, `Sander-Young-Yung`, `Regev`, `Brakerski-Vaikuntanathan`,
-   * `Freeman-Boneh-Goh-Nissim` or `Gentry-Halevi-Vaikuntanathan`.
+   * `Freeman-Boneh-Goh-Nissim`, `Gentry-Halevi-Vaikuntanathan` or
+   * `Lyubashevsky-Peikert-Regev`.
    */
   plaintextLimit?: number | bigint | null;
 
@@ -142,6 +207,20 @@ export interface LightPHEOptions<
    *    Damgard-Geisler-Kroigaard.
    */
   boost?: Boost;
+
+  /**
+   * Picks the generator of a known prime order while generating keys. Default
+   * is false. Threshold decryption and zero-knowledge proofs require this.
+   * Only used when `algorithmName` is `ElGamal` or `Exponential-ElGamal`.
+   */
+  primeOrder?: boolean;
+
+  /**
+   * Generates the modulus as a product of two safe primes. Default is false.
+   * Proofs of partial decryption in threshold decryption require this. Only
+   * used when `algorithmName` is `Paillier` or `Damgard-Jurik`.
+   */
+  safePrimes?: boolean;
 }
 
 /** Options accepted when encrypting. */
@@ -178,6 +257,19 @@ export class LightPHE<Boost extends string | null | undefined = undefined> {
       keys = this.restoreKeys(options.keyFile);
     }
 
+    if (
+      options.safePrimes === true &&
+      keys == null &&
+      (options.algorithmName === Algorithm.Paillier ||
+        options.algorithmName === Algorithm.DamgardJurik)
+    ) {
+      keys = thresholdUtils.generateSafePaillierKeys(
+        options.keySize ?? 1024,
+        options.maxTries ?? 10000,
+        options.algorithmName === Algorithm.DamgardJurik ? 2 : undefined
+      );
+    }
+
     if (keys != null) {
       validateKeys(options.algorithmName, keys);
     }
@@ -189,6 +281,7 @@ export class LightPHE<Boost extends string | null | undefined = undefined> {
       curve: options.curve,
       plaintextLimit: options.plaintextLimit,
       maxTries: options.maxTries ?? 10000,
+      primeOrder: options.primeOrder ?? false,
     };
     this.cs = buildCryptosystem(options.algorithmName, buildOptions);
 
@@ -270,6 +363,18 @@ export class LightPHE<Boost extends string | null | undefined = undefined> {
         (typeof plaintext === 'number' && !Number.isInteger(plaintext)))
     ) {
       throw new Error(floatNotSupported);
+    }
+
+    if (
+      this.algorithmName === Algorithm.GentrySahaiWaters &&
+      !(
+        plaintext === 0 ||
+        plaintext === 1 ||
+        plaintext === ZERO ||
+        plaintext === ONE
+      )
+    ) {
+      throw new Error(GSW_FLOAT_NOT_SUPPORTED_MSG);
     }
 
     if (Array.isArray(plaintext)) {
@@ -427,6 +532,519 @@ export class LightPHE<Boost extends string | null | undefined = undefined> {
   ): bigint {
     this.requireKey('private_key', 'perform decryption');
     return this.cs.decryptVerifiableCiphertext(verifiableCiphertext, label);
+  }
+
+  /**
+   * Splits the private key into shares for threshold decryption. Any
+   * threshold many shareholders can decrypt a ciphertext together, but fewer
+   * shareholders cannot. Runs on dealer side. Threshold parameters are added
+   * into the public key, and the private key is dropped from this
+   * cryptosystem afterwards, so export the public key again. Supported by
+   * ElGamal, Exponential-ElGamal, EllipticCurve-ElGamal, Paillier and
+   * Damgard-Jurik. ElGamal and Exponential-ElGamal keys must be generated with
+   * `primeOrder: true`.
+   *
+   * @param threshold - minimum number of shareholders required to decrypt.
+   * @param parties - total number of shareholders.
+   * @returns public key and share of each shareholder. Each item must be sent
+   *   to its own shareholder secretly.
+   */
+  generateThresholdKeys(threshold: number, parties: number): Keys[] {
+    this.requireKey('private_key', 'generate threshold keys');
+    this.requireKey('public_key', 'generate threshold keys');
+    thresholdUtils.validateThreshold(threshold, parties);
+
+    const shareKeys = this.cs.generateThresholdKeys(threshold, parties);
+
+    // dealer forgets the private key, and public key now has threshold parameters
+    delete this.cs.keys.private_key;
+    this.publicCs = null;
+
+    return shareKeys;
+  }
+
+  /**
+   * Decrypts a ciphertext partially with the share of a shareholder. Partial
+   * decryption reveals nothing about the plaintext alone. Runs on shareholder
+   * side.
+   *
+   * @param options.prove - set this to true to attach a zero-knowledge proof
+   *   that the partial decryption is computed with the share of this
+   *   shareholder. Default is false. Supported by ElGamal,
+   *   Exponential-ElGamal, EllipticCurve-ElGamal, and Paillier and
+   *   Damgard-Jurik with keys generated with `safePrimes: true`.
+   * @returns partial decryption to be sent to the combiner.
+   */
+  partialDecrypt(
+    ciphertext: Ciphertext | CatalanoFioreCiphertext,
+    options?: { prove?: boolean }
+  ): PartialDecryption;
+  partialDecrypt(
+    ciphertext: EncryptedTensor,
+    options?: { prove?: boolean }
+  ): TensorPartialDecryption[];
+  partialDecrypt(
+    ciphertext: Ciphertext | EncryptedTensor | CatalanoFioreCiphertext,
+    options?: { prove?: boolean }
+  ): PartialDecryption | TensorPartialDecryption[];
+  partialDecrypt(
+    ciphertext: Ciphertext | EncryptedTensor | CatalanoFioreCiphertext,
+    options?: { prove?: boolean }
+  ): PartialDecryption | TensorPartialDecryption[] {
+    const prove = options?.prove ?? false;
+    if (this.cs.keys.threshold_key == null) {
+      throw new Error(
+        'You must have threshold key to perform partial decryption'
+      );
+    }
+
+    if (ciphertext instanceof CatalanoFioreCiphertext) {
+      throw new Error(
+        'Ciphertexts supporting multiplication do not support threshold decryption'
+      );
+    }
+
+    if (ciphertext instanceof EncryptedTensor) {
+      return ciphertext.fractions.map((c) => ({
+        abs_dividend: this.cs.partialDecrypt(c.absDividend, prove),
+        divisor: this.cs.partialDecrypt(c.divisor, prove),
+      }));
+    }
+
+    return this.cs.partialDecrypt(ciphertext.value, prove);
+  }
+
+  /**
+   * Restores plaintext from partial decryptions of at least threshold many
+   * shareholders. Public key is enough, so anyone can combine them.
+   *
+   * @param partialDecryptions - outputs of {@link partialDecrypt} of
+   *   shareholders.
+   * @param options.verify - set this to true to check zero-knowledge proofs of
+   *   partial decryptions, and discard invalid or unproven ones. Default is
+   *   false, then a cheating shareholder can cause a wrong plaintext silently.
+   *   Supported by ElGamal, Exponential-ElGamal, EllipticCurve-ElGamal, and
+   *   Paillier and Damgard-Jurik with keys generated with `safePrimes: true`.
+   * @returns restored message.
+   */
+  combinePartialDecryptions(
+    ciphertext: Ciphertext,
+    partialDecryptions: readonly PartialDecryption[] | readonly unknown[],
+    options?: { verify?: boolean }
+  ): bigint;
+  combinePartialDecryptions(
+    ciphertext: EncryptedTensor,
+    partialDecryptions: readonly TensorPartialDecryption[][],
+    options?: { verify?: boolean }
+  ): number[];
+  combinePartialDecryptions(
+    ciphertext: Ciphertext | EncryptedTensor,
+    partialDecryptions: readonly unknown[],
+    options?: { verify?: boolean }
+  ): bigint | number[];
+  combinePartialDecryptions(
+    ciphertext: Ciphertext | EncryptedTensor,
+    partialDecryptions: readonly unknown[],
+    options?: { verify?: boolean }
+  ): bigint | number[] {
+    const verify = options?.verify ?? false;
+    this.requireKey('public_key', 'combine partial decryptions');
+
+    if (ciphertext instanceof EncryptedTensor) {
+      const partials =
+        partialDecryptions as readonly TensorPartialDecryption[][];
+      return ciphertext.fractions.map((c, k) => {
+        const absDividend = this.cs.combinePartialDecryptions(
+          c.absDividend,
+          partials.map((p) => p[k].abs_dividend),
+          verify
+        );
+        const divisor = this.cs.combinePartialDecryptions(
+          c.divisor,
+          partials.map((p) => p[k].divisor),
+          verify
+        );
+        return (c.sign * Number(absDividend)) / Number(divisor);
+      });
+    }
+
+    return this.cs.combinePartialDecryptions(
+      ciphertext.value,
+      partialDecryptions,
+      verify
+    );
+  }
+
+  /**
+   * Verifies that a partial decryption is computed with the share of its
+   * shareholder. Public key is enough. Partial decryption must be created
+   * with `prove: true`. {@link combinePartialDecryptions} does this if
+   * `verify: true` and discards invalid ones, so this is useful to find a
+   * cheating shareholder. Supported by ElGamal, Exponential-ElGamal,
+   * EllipticCurve-ElGamal, and Paillier and Damgard-Jurik with keys generated
+   * with `safePrimes: true`.
+   */
+  verifyPartialDecryption(
+    ciphertext: Ciphertext,
+    partialDecryption: PartialDecryption | Record<string, unknown>
+  ): boolean {
+    this.requireKey('public_key', 'verify partial decryption');
+    return this.cs.verifyPartialDecryption(ciphertext.value, partialDecryption);
+  }
+
+  /**
+   * Decrypts a ciphertext and proves that the decryption is correct, without
+   * revealing the private key. Runs on private key owner side, e.g. a
+   * tallying authority announcing the result of an election. Supported by
+   * ElGamal, Exponential-ElGamal (keys generated with `primeOrder: true`),
+   * EllipticCurve-ElGamal, Paillier and Damgard-Jurik.
+   *
+   * @returns restored message, same as decrypt, and the proof of correct
+   *   decryption to be shared with the verifier.
+   */
+  decryptWithProof(ciphertext: Ciphertext): [bigint, DecryptionProof] {
+    this.requireKey('private_key', 'perform decryption');
+    this.requireKey('public_key', 'perform decryption');
+    if (!(ciphertext instanceof Ciphertext)) {
+      throw new Error(
+        'Proofs of correct decryption are supported for Ciphertext only'
+      );
+    }
+    return this.cs.decryptWithProof(ciphertext.value);
+  }
+
+  /**
+   * Verifies that a ciphertext is decrypted to the given plaintext. Public key
+   * is enough, so anyone can check the announced plaintext.
+   *
+   * @param proof - output of {@link decryptWithProof}.
+   */
+  verifyDecryption(
+    ciphertext: Ciphertext,
+    plaintext: number | bigint,
+    proof: DecryptionProof | Record<string, unknown> | null | undefined
+  ): boolean {
+    this.requireKey('public_key', 'verify decryption');
+    return this.cs.verifyDecryption(
+      ciphertext.value,
+      isInteger(plaintext) ? BigInt(plaintext) : plaintext,
+      proof
+    );
+  }
+
+  /**
+   * Encrypts a plaintext and proves that it is one of the allowed values,
+   * without revealing which one. For instance, a voter proves that the
+   * encrypted vote is 0 or 1, so cannot cheat with a vote of 100 in the
+   * homomorphic tally. Public key is enough. Supported by Exponential-ElGamal
+   * (keys generated with `primeOrder: true`), EllipticCurve-ElGamal, Paillier
+   * and Damgard-Jurik.
+   *
+   * @param plaintext - message to encrypt, must be one of values.
+   * @param options.values - allowed values. Default is `[0, 1]`.
+   * @param options.context - public data bound to the proof, e.g. id of the
+   *   voter, so that the proof cannot be copied for another context.
+   * @returns encrypted message and the proof that it encrypts one of values.
+   */
+  encryptWithProof(
+    plaintext: number | bigint,
+    options?: { values?: readonly (number | bigint)[]; context?: unknown }
+  ): [Ciphertext, MembershipProof] {
+    this.requireKey('public_key', 'perform encryption');
+    const values = this.normalizeValues(options?.values);
+    if (!isInteger(plaintext)) {
+      throw new Error('Plaintext must be an integer');
+    }
+    const normalized = normalizeInput(plaintext, this.cs.plaintextModulo);
+    if (!values.includes(normalized)) {
+      throw new Error('Plaintext must be one of the allowed values');
+    }
+
+    const [ciphertext, proof] = this.cs.encryptWithProof(
+      normalized,
+      values,
+      options?.context
+    );
+    return [this.publicCiphertext(ciphertext), proof];
+  }
+
+  /**
+   * Verifies that a ciphertext encrypts one of the allowed values without
+   * decrypting it. Public key is enough, e.g. anyone can check the ballots of
+   * an election.
+   *
+   * @param proof - output of {@link encryptWithProof}.
+   * @param options.values - allowed values. Default is `[0, 1]`.
+   * @param options.context - public data that the proof is expected to be
+   *   bound to.
+   */
+  verifyCiphertext(
+    ciphertext: Ciphertext,
+    proof: MembershipProof | Record<string, unknown> | null | undefined,
+    options?: { values?: readonly (number | bigint)[]; context?: unknown }
+  ): boolean {
+    this.requireKey('public_key', 'verify ciphertext');
+    const values = this.normalizeValues(options?.values);
+    if (!(ciphertext instanceof Ciphertext)) {
+      return false;
+    }
+    return this.cs.verifyCiphertext(
+      ciphertext.value,
+      proof,
+      values,
+      options?.context
+    );
+  }
+
+  /**
+   * Encrypts a plaintext and proves that the encryptor knows it, without
+   * revealing it. For instance, a bidder of a sealed-bid auction proves
+   * knowledge of the bid, so nobody can outbid by copying someone else's
+   * encrypted bid and adding 1 to it homomorphically. Public key is enough.
+   * Supported by ElGamal and Exponential-ElGamal (keys generated with
+   * `primeOrder: true`), EllipticCurve-ElGamal, Paillier and Damgard-Jurik.
+   *
+   * @param options.context - public data bound to the proof, e.g. id of the
+   *   encryptor, so that the proof cannot be copied for another context.
+   * @returns encrypted message and the proof of knowledge of plaintext.
+   */
+  encryptWithProofOfKnowledge(
+    plaintext: number | bigint,
+    options?: { context?: unknown }
+  ): [Ciphertext, KnowledgeProof] {
+    this.requireKey('public_key', 'perform encryption');
+    if (!isInteger(plaintext)) {
+      throw new Error('Plaintext must be an integer');
+    }
+    const [ciphertext, proof] = this.cs.encryptWithProofOfKnowledge(
+      normalizeInput(plaintext, this.cs.plaintextModulo),
+      options?.context
+    );
+    return [this.publicCiphertext(ciphertext), proof];
+  }
+
+  /**
+   * Verifies that the encryptor of a ciphertext knows its plaintext without
+   * decrypting it. Public key is enough.
+   *
+   * @param proof - output of {@link encryptWithProofOfKnowledge}.
+   * @param options.context - public data that the proof is expected to be
+   *   bound to.
+   */
+  verifyKnowledge(
+    ciphertext: Ciphertext,
+    proof: KnowledgeProof | Record<string, unknown> | null | undefined,
+    options?: { context?: unknown }
+  ): boolean {
+    this.requireKey('public_key', 'verify knowledge');
+    if (!(ciphertext instanceof Ciphertext)) {
+      return false;
+    }
+    return this.cs.verifyKnowledge(ciphertext.value, proof, options?.context);
+  }
+
+  /**
+   * Encrypts a choice among options as a one-hot vector, i.e. 1 for the
+   * chosen option and 0 for others, and proves that exactly one option is
+   * chosen without revealing which one. For instance, a voter votes for one
+   * of many parties. Summing slots of all ballots homomorphically counts votes
+   * of each option separately, so the number of options is not limited.
+   * Public key is enough. Supported by Exponential-ElGamal (keys generated
+   * with `primeOrder: true`), EllipticCurve-ElGamal, Paillier and
+   * Damgard-Jurik.
+   *
+   * @param choice - index of the chosen option in `[0, options)`.
+   * @param options - number of options.
+   * @param extra.context - public data bound to the proof, e.g. id of the
+   *   voter, so that the proof cannot be copied for another context.
+   * @returns encrypted slots, one per option, and the proof that slots are 0
+   *   or 1 and sum to 1.
+   */
+  encryptOneHot(
+    choice: number,
+    options: number,
+    extra?: { context?: unknown }
+  ): [Ciphertext[], OneHotProof] {
+    this.requireKey('public_key', 'perform encryption');
+    if (!Number.isInteger(choice) || !Number.isInteger(options)) {
+      throw new Error('Choice and number of options must be integers');
+    }
+    if (options < 1) {
+      throw new Error('Number of options must be at least 1');
+    }
+    if (choice < 0 || choice >= options) {
+      throw new Error(`Choice must be in [0, ${options})`);
+    }
+    if (this.cs.proveMembership === Homomorphic.prototype.proveMembership) {
+      throw new Error(
+        `${this.algorithmName} does not support proving that a ciphertext` +
+          ' encrypts one of given values'
+      );
+    }
+
+    const [zero, one] = this.normalizeValues([0, 1]);
+    const [ciphertexts, proof] = zkp.proveOneHot(
+      this.cs,
+      choice,
+      options,
+      [zero, one],
+      extra?.context
+    );
+    return [ciphertexts.map((c) => this.publicCiphertext(c)), proof];
+  }
+
+  /**
+   * Verifies that encrypted slots are a one-hot vector, i.e. exactly one
+   * option is chosen, without decrypting them. Public key is enough.
+   *
+   * @param proof - output of {@link encryptOneHot}.
+   * @param options.context - public data that the proof is expected to be
+   *   bound to.
+   */
+  verifyOneHot(
+    ciphertexts: readonly Ciphertext[],
+    proof: OneHotProof | Record<string, unknown> | null | undefined,
+    options?: { context?: unknown }
+  ): boolean {
+    this.requireKey('public_key', 'verify one-hot ciphertexts');
+    if (
+      !Array.isArray(ciphertexts) ||
+      !ciphertexts.every((c) => c instanceof Ciphertext)
+    ) {
+      return false;
+    }
+    const [zero, one] = this.normalizeValues([0, 1]);
+    return zkp.verifyOneHot(
+      this.cs,
+      ciphertexts.map((c) => c.value),
+      proof,
+      [zero, one],
+      options?.context
+    );
+  }
+
+  /**
+   * Encrypts a plaintext and proves that it is in `[low, high]`, without
+   * revealing it. For instance, an employee proves that the encrypted salary
+   * is in a sensible range, so cannot skew the average of salaries with a
+   * negative or huge value. Public key is enough. Supported by
+   * Exponential-ElGamal (keys generated with `primeOrder: true`),
+   * EllipticCurve-ElGamal, Paillier and Damgard-Jurik. Proof size grows with
+   * the bit length of `high - low`.
+   *
+   * @param plaintext - message to encrypt in `[low, high]`.
+   * @param low - lower bound of the range.
+   * @param high - upper bound of the range.
+   * @param options.context - public data bound to the proof, e.g. id of the
+   *   employee, so that the proof cannot be copied for another context.
+   * @returns encrypted message and the proof that it is in `[low, high]`.
+   */
+  encryptWithRangeProof(
+    plaintext: number | bigint,
+    low: number | bigint,
+    high: number | bigint,
+    options?: { context?: unknown }
+  ): [Ciphertext, RangeProof] {
+    this.requireKey('public_key', 'perform encryption');
+    const values = this.normalizeRange(low, high);
+    if (!isInteger(plaintext)) {
+      throw new Error('Plaintext must be an integer');
+    }
+    const value = BigInt(plaintext);
+    if (value < BigInt(low) || value > BigInt(high)) {
+      throw new Error(`Plaintext must be in [${low}, ${high}]`);
+    }
+
+    const [ciphertext, proof] = zkp.proveRange(
+      this.cs,
+      value,
+      BigInt(low),
+      BigInt(high),
+      values,
+      options?.context
+    );
+    return [this.publicCiphertext(ciphertext), proof];
+  }
+
+  /**
+   * Verifies that a ciphertext encrypts a value in `[low, high]` without
+   * decrypting it. Public key is enough.
+   *
+   * @param proof - output of {@link encryptWithRangeProof}.
+   * @param options.context - public data that the proof is expected to be
+   *   bound to.
+   */
+  verifyRange(
+    ciphertext: Ciphertext,
+    proof: RangeProof | Record<string, unknown> | null | undefined,
+    low: number | bigint,
+    high: number | bigint,
+    options?: { context?: unknown }
+  ): boolean {
+    this.requireKey('public_key', 'verify range');
+    const values = this.normalizeRange(low, high);
+    if (!(ciphertext instanceof Ciphertext)) {
+      return false;
+    }
+    return zkp.verifyRange(
+      this.cs,
+      ciphertext.value,
+      proof,
+      BigInt(low),
+      BigInt(high),
+      values,
+      options?.context
+    );
+  }
+
+  /**
+   * Validates bounds of a range proof, and normalizes low, 0 and 1 as encrypt
+   * does.
+   */
+  private normalizeRange(
+    low: unknown,
+    high: unknown
+  ): [bigint, bigint, bigint] {
+    if (!isInteger(low) || !isInteger(high)) {
+      throw new Error('Bounds of the range must be integers');
+    }
+    if (BigInt(low) > BigInt(high)) {
+      throw new Error(
+        `Lower bound ${low} must not be greater than upper bound ${high}`
+      );
+    }
+    if (BigInt(high) - BigInt(low) >= this.cs.plaintextModulo) {
+      throw new Error('Range must be narrower than the plaintext modulo');
+    }
+    const modulo = this.cs.plaintextModulo;
+    return [
+      normalizeInput(BigInt(low), modulo),
+      normalizeInput(ZERO, modulo),
+      normalizeInput(ONE, modulo),
+    ];
+  }
+
+  /**
+   * Validates allowed values of a proof and normalizes them as encrypt does.
+   *
+   * @param values - allowed values. Default is `[0, 1]`.
+   */
+  private normalizeValues(values?: readonly unknown[]): bigint[] {
+    const allowed = values ?? [0, 1];
+    if (
+      !Array.isArray(allowed) ||
+      allowed.length === 0 ||
+      !allowed.every(isInteger)
+    ) {
+      throw new Error('Allowed values must be a non-empty list of integers');
+    }
+    const normalized = (allowed as (number | bigint)[]).map((value) =>
+      normalizeInput(value, this.cs.plaintextModulo)
+    );
+    if (new Set(normalized).size !== normalized.length) {
+      throw new Error('Allowed values must be distinct');
+    }
+    return normalized;
   }
 
   /** Encrypts a tensor of real numbers element by element. */
@@ -716,6 +1334,616 @@ export class LightPHE<Boost extends string | null | undefined = undefined> {
     return this.cs.answerArgmax(message);
   };
 
+  /**
+   * Encrypts a query vector for encrypted k nearest neighbor search. Runs on
+   * client side, e.g. a user searching a face embedding in the gallery of a
+   * server. Embeddings must be quantized to integers, e.g. by scaling and
+   * rounding. Only supported by Damgard-Geisler-Kroigaard.
+   *
+   * @returns encrypted query, to be sent to the server.
+   */
+  encryptKnnQuery(query: readonly (number | bigint)[]): EncryptedKnnQuery {
+    this.requireKey('public_key', 'perform encryption');
+    this.requireKnnSupport();
+    if (
+      !Array.isArray(query) ||
+      query.length === 0 ||
+      !query.every(isInteger)
+    ) {
+      throw new Error('Query must be a non-empty list of integers');
+    }
+
+    const encrypted = nearestNeighbors.encryptQuery(this.cs, query.map(BigInt));
+    return {
+      query: encrypted.query.map((c) => this.publicCiphertext(c)),
+      norm: this.publicCiphertext(encrypted.norm),
+    };
+  }
+
+  /**
+   * Finds the k nearest vectors of a database to an encrypted query by
+   * squared euclidean distance. Runs on server side and talks to the client
+   * (private key owner) through the client callable. Server learns nothing,
+   * and client learns only the indices, or the labels, of the k nearest
+   * vectors, but not the distances or the other vectors. Earlier index is
+   * returned on ties. Only supported by Damgard-Geisler-Kroigaard.
+   *
+   * @param encryptedQuery - output of {@link encryptKnnQuery}.
+   * @param database - vectors of the server, in plain.
+   * @param k - number of nearest vectors to find.
+   * @param bitLength - squared distances between the query and vectors must
+   *   be less than `2^bitLength`, e.g. 24 for 128-dimensional embeddings of
+   *   8-bit entries.
+   * @param client - sends a message to the client, and returns the output of
+   *   the client's {@link answerKnn}. Locally, it can be client's `answerKnn`
+   *   directly. Otherwise, wrap your network call with it.
+   * @param options.labels - optional labels of vectors, e.g. ids of people.
+   *   If set, encrypted labels of the nearest vectors are returned as well.
+   * @returns encrypted indices, and encrypted labels if labels are set, of the
+   *   k nearest vectors from the nearest one. To be decrypted by the client.
+   */
+  async evaluateKnn(
+    encryptedQuery: EncryptedKnnQuery,
+    database: readonly (readonly (number | bigint)[])[],
+    k: number,
+    bitLength: number,
+    client: ArgmaxClient,
+    options?: { labels?: readonly (number | bigint)[] }
+  ): Promise<KnnResult> {
+    this.requireKey('public_key', 'perform encrypted nearest neighbor search');
+    this.requireKnnSupport();
+
+    const query = (encryptedQuery as Partial<EncryptedKnnQuery> | null)?.query;
+    if (!Array.isArray(query) || query.length === 0) {
+      throw new Error('Encrypted query must be an output of encryptKnnQuery');
+    }
+    if (!Array.isArray(database) || database.length === 0) {
+      throw new Error('Database must be a non-empty list of vectors');
+    }
+    if (
+      database.some(
+        (vector) =>
+          !Array.isArray(vector) ||
+          vector.length !== query.length ||
+          !vector.every(isInteger)
+      )
+    ) {
+      throw new Error(
+        `Every vector of the database must be a list of ${query.length} integers`
+      );
+    }
+    if (!Number.isInteger(k) || k < 1 || k > database.length) {
+      throw new Error(`k must be in [1, ${database.length}]`);
+    }
+    const labels = options?.labels;
+    if (
+      labels !== undefined &&
+      (!Array.isArray(labels) ||
+        labels.length !== database.length ||
+        !labels.every(isInteger))
+    ) {
+      throw new Error('Labels must be a list of integers, one for each vector');
+    }
+    if (!Number.isInteger(bitLength) || bitLength < 1) {
+      throw new Error('Bit length must be a positive integer');
+    }
+    const vectors: bigint[][] = database.map(
+      (vector: readonly (number | bigint)[]) => vector.map((x) => BigInt(x))
+    );
+    // argmax validates that lifted values fit into the plaintext space
+    const largestNorm = vectors
+      .map((vector) => vector.reduce((total, x) => total + x * x, ZERO))
+      .reduce((a, b) => (b > a ? b : a));
+    if (largestNorm >= ONE << BigInt(bitLength)) {
+      throw new Error(
+        `Squared norm ${largestNorm} of a vector in the database does not fit into` +
+          ` ${bitLength} bits`
+      );
+    }
+
+    const valueOf = (c: Ciphertext | bigint): bigint =>
+      c instanceof Ciphertext ? (c.value as bigint) : c;
+    const result = await nearestNeighbors.evaluateKnn(
+      this.cs,
+      {
+        query: query.map(valueOf),
+        norm: valueOf(encryptedQuery.norm),
+      },
+      vectors,
+      k,
+      bitLength,
+      client,
+      labels?.map(BigInt)
+    );
+    return {
+      indices: result.indices.map((c) => this.publicCiphertext(c)),
+      ...(result.labels === undefined
+        ? {}
+        : { labels: result.labels.map((c) => this.publicCiphertext(c)) }),
+    };
+  }
+
+  /**
+   * Answers a message of the server during encrypted k nearest neighbor
+   * search. Runs on client side. Every value decrypted here is masked or
+   * shuffled, so client learns nothing but the final result. Only supported by
+   * Damgard-Geisler-Kroigaard. It is bound to this instance, so it can be
+   * passed as the client of {@link evaluateKnn} directly.
+   *
+   * @returns response to be sent back to the server.
+   */
+  readonly answerKnn = (message: ArgmaxMessage): bigint[] => {
+    this.requireKey('private_key', 'perform decryption');
+    this.requireKnnSupport();
+    return nearestNeighbors.answerKnn(this.cs, message);
+  };
+
+  /**
+   * Computes encrypted squared euclidean distances between an encrypted query
+   * and encrypted vectors. Runs on the side of an untrusted cloud storing the
+   * encrypted database of an owner, and requires the public key only. Both
+   * the query and the vectors are encrypted, so this requires
+   * `boost: 'Catalano-Fiore'` for one multiplication. Cloud learns nothing,
+   * and the owner finds the nearest vectors with {@link decryptKnn}.
+   *
+   * @returns one encrypted distance for each vector.
+   */
+  evaluateKnnDistances(
+    encryptedQuery: readonly CatalanoFioreCiphertext[],
+    encryptedDatabase: readonly (readonly CatalanoFioreCiphertext[])[]
+  ): CatalanoFioreCiphertext[] {
+    this.requireKey('public_key', 'compute encrypted distances');
+    if (this.catalanoFiore === null) {
+      throw new Error(
+        "Encrypted distances between encrypted vectors require boost='Catalano-Fiore'"
+      );
+    }
+
+    const isVector = (vector: unknown): boolean =>
+      Array.isArray(vector) &&
+      vector.length > 0 &&
+      vector.every(
+        (c) => c instanceof CatalanoFioreCiphertext && !c.isMultiplied
+      );
+
+    if (!isVector(encryptedQuery)) {
+      throw new Error(
+        'Encrypted query must be a non-empty list of encrypted integers'
+      );
+    }
+    if (!Array.isArray(encryptedDatabase) || encryptedDatabase.length === 0) {
+      throw new Error('Encrypted database must be a non-empty list of vectors');
+    }
+    if (
+      encryptedDatabase.some(
+        (vector) => !isVector(vector) || vector.length !== encryptedQuery.length
+      )
+    ) {
+      throw new Error(
+        `Every vector of the database must be a list of ${encryptedQuery.length}` +
+          ' encrypted integers'
+      );
+    }
+
+    return encryptedDatabase.map((vector) => {
+      let total: CatalanoFioreCiphertext | undefined;
+      encryptedQuery.forEach((q, i) => {
+        const difference = q.subtract(vector[i]);
+        const square = difference.multiply(difference);
+        total = total === undefined ? square : total.add(square);
+      });
+      return total!;
+    });
+  }
+
+  /**
+   * Finds the k nearest vectors from encrypted distances computed by
+   * {@link evaluateKnnDistances}. Runs on owner side, and requires the private
+   * key.
+   *
+   * @param k - number of nearest vectors to find.
+   * @returns indices and distances of the k nearest vectors from the nearest
+   *   one. Earlier index is returned on ties.
+   */
+  decryptKnn(
+    encryptedDistances: readonly CatalanoFioreCiphertext[],
+    k: number
+  ): { indices: number[]; distances: bigint[] } {
+    this.requireKey('private_key', 'perform decryption');
+    if (!Array.isArray(encryptedDistances) || encryptedDistances.length === 0) {
+      throw new Error('Encrypted distances must be a non-empty list');
+    }
+    if (!Number.isInteger(k) || k < 1 || k > encryptedDistances.length) {
+      throw new Error(`k must be in [1, ${encryptedDistances.length}]`);
+    }
+
+    const distances = encryptedDistances.map((c) => this.decrypt(c));
+    const indices = distances
+      .map((_, i) => i)
+      .sort((i, j) =>
+        distances[i] === distances[j]
+          ? i - j
+          : distances[i] < distances[j]
+            ? -1
+            : 1
+      )
+      .slice(0, k);
+    return { indices, distances: indices.map((i) => distances[i]) };
+  }
+
+  /**
+   * Encrypts a model update of a client for secure aggregation in federated
+   * learning. Values are quantized with the precision of this cryptosystem,
+   * and many of them are packed into a single ciphertext, so an update needs
+   * far fewer ciphertexts than its length. Public key is enough. Clients must
+   * use the same key, length, precision, maxValue and maxClients. Supported
+   * by Paillier and Damgard-Jurik.
+   *
+   * @param update - model update, e.g. gradients or weights.
+   * @param maxValue - absolute values of the update must be at most this,
+   *   e.g. the clipping bound of gradients.
+   * @param maxClients - maximum number of updates to be aggregated. Slots of
+   *   ciphertexts are wide enough to sum this many updates without overflow.
+   * @returns chunks of ciphertexts, the layout of packing, and the number of
+   *   updates it contains.
+   */
+  encryptUpdate(
+    update: readonly number[],
+    maxValue: number,
+    maxClients: number
+  ): EncryptedUpdate {
+    this.requireKey('public_key', 'perform encryption');
+    this.requireAggregationSupport();
+    if (!Array.isArray(update)) {
+      throw new Error('Update must be a list of numbers');
+    }
+
+    const layout = secureAggregation.buildLayout(
+      update.length,
+      this.precision,
+      maxValue,
+      maxClients,
+      this.cs.plaintextModulo
+    );
+    const plaintexts = secureAggregation.pack(update, layout);
+    return {
+      chunks: plaintexts.map((plaintext) =>
+        this.publicCiphertext(this.cs.encrypt(plaintext))
+      ),
+      layout,
+      count: 1,
+    };
+  }
+
+  /**
+   * Sums encrypted updates of clients chunk by chunk. Runs on server side, and
+   * requires the public key only. Server learns nothing about updates or their
+   * sum.
+   *
+   * @param encryptedUpdates - outputs of {@link encryptUpdate} or
+   *   {@link aggregateUpdates}.
+   */
+  aggregateUpdates(
+    encryptedUpdates: readonly EncryptedUpdate[]
+  ): EncryptedUpdate {
+    this.requireKey('public_key', 'aggregate updates');
+    this.requireAggregationSupport();
+    if (!Array.isArray(encryptedUpdates) || encryptedUpdates.length === 0) {
+      throw new Error('Encrypted updates must be a non-empty list');
+    }
+
+    const layout = encryptedUpdates[0].layout;
+    if (
+      encryptedUpdates.some(
+        (update) => !secureAggregation.sameLayout(update.layout, layout)
+      )
+    ) {
+      throw new Error(
+        'Encrypted updates must have the same layout, i.e. the same length,' +
+          ' precision, max_value and max_clients'
+      );
+    }
+    const count = encryptedUpdates.reduce(
+      (total, update) => total + update.count,
+      0
+    );
+    if (count > layout.max_clients) {
+      throw new Error(
+        `Sum of ${count} updates would overflow slots packed for at most` +
+          ` ${layout.max_clients} clients`
+      );
+    }
+
+    let chunks = [...encryptedUpdates[0].chunks];
+    for (const update of encryptedUpdates.slice(1)) {
+      chunks = chunks.map((total, i) => total.add(update.chunks[i]));
+    }
+    return { chunks, layout, count };
+  }
+
+  /**
+   * Decrypts an encrypted sum of updates partially with the share of a
+   * shareholder, e.g. a member of a committee of clients. Shareholders decrypt
+   * sums only, never individual updates.
+   *
+   * @param encryptedSum - output of {@link aggregateUpdates}.
+   * @param options.prove - set this to true to attach proofs of correct
+   *   partial decryption. Keys must be generated with `safePrimes: true`.
+   * @returns one partial decryption for each chunk, to be sent to the
+   *   combiner.
+   */
+  partialDecryptAggregate(
+    encryptedSum: EncryptedUpdate,
+    options?: { prove?: boolean }
+  ): PartialDecryption[] {
+    this.requireAggregationSupport();
+    return encryptedSum.chunks.map((chunk) =>
+      this.partialDecrypt(chunk, options)
+    );
+  }
+
+  /**
+   * Restores the sum and the mean of updates from partial decryptions of at
+   * least threshold many shareholders. Public key is enough.
+   *
+   * @param partialDecryptions - outputs of {@link partialDecryptAggregate} of
+   *   shareholders.
+   * @param options.verify - set this to true to check proofs of partial
+   *   decryptions, and discard invalid or unproven ones.
+   */
+  combineAggregate(
+    encryptedSum: EncryptedUpdate,
+    partialDecryptions: readonly (readonly PartialDecryption[])[],
+    options?: { verify?: boolean }
+  ): Aggregate {
+    this.requireKey('public_key', 'combine partial decryptions');
+    this.requireAggregationSupport();
+    const plaintexts = encryptedSum.chunks.map((chunk, i) =>
+      this.cs.combinePartialDecryptions(
+        chunk.value,
+        partialDecryptions.map((partials) => partials[i]),
+        options?.verify ?? false
+      )
+    );
+    return this.unpackAggregate(encryptedSum, plaintexts);
+  }
+
+  /**
+   * Restores the sum and the mean of updates with the private key, if a
+   * single party holds it instead of a committee.
+   */
+  decryptAggregate(encryptedSum: EncryptedUpdate): Aggregate {
+    this.requireKey('private_key', 'perform decryption');
+    this.requireAggregationSupport();
+    const plaintexts = encryptedSum.chunks.map((chunk) =>
+      this.cs.decrypt(chunk.value)
+    );
+    return this.unpackAggregate(encryptedSum, plaintexts);
+  }
+
+  /** Unpacks decrypted chunks of a sum of updates. */
+  private unpackAggregate(
+    encryptedSum: EncryptedUpdate,
+    plaintexts: readonly bigint[]
+  ): Aggregate {
+    const count = encryptedSum.count;
+    const sum = secureAggregation.unpack(
+      plaintexts,
+      encryptedSum.layout,
+      count
+    );
+    return { sum, mean: sum.map((x) => x / count), count };
+  }
+
+  /** Throws if the algorithm does not support secure aggregation. */
+  private requireAggregationSupport(): void {
+    if (
+      this.algorithmName !== Algorithm.Paillier &&
+      this.algorithmName !== Algorithm.DamgardJurik
+    ) {
+      throw new Error(
+        `${this.algorithmName} does not support secure aggregation.` +
+          ' Use Paillier or Damgard-Jurik instead.'
+      );
+    }
+  }
+
+  /**
+   * Classifies encrypted features with a private linear model, i.e. finds the
+   * class of the greatest score `<w_i, x> + b_i`, e.g. logistic regression or
+   * a linear SVM. Runs on server side and talks to the client (private key
+   * owner) through the client callable. Client learns only the predicted
+   * class, and server learns nothing. Only supported by
+   * Damgard-Geisler-Kroigaard.
+   *
+   * @param encryptedFeatures - features encrypted by the client. Floats must
+   *   be quantized to integers, e.g. by scaling and rounding.
+   * @param weights - integer weights of each class.
+   * @param bitLength - absolute values of scores must be less than
+   *   `2^bitLength`.
+   * @param client - sends a message to the client, and returns the output of
+   *   the client's {@link answerArgmax}.
+   * @param options.biases - optional integer bias of each class.
+   * @returns encrypted index of the predicted class, to be decrypted by the
+   *   client. Earlier class is returned on ties.
+   */
+  async evaluateHyperplane(
+    encryptedFeatures: readonly Ciphertext[],
+    weights: readonly (readonly (number | bigint)[])[],
+    bitLength: number,
+    client: ArgmaxClient,
+    options?: { biases?: readonly (number | bigint)[] }
+  ): Promise<Ciphertext> {
+    this.requireKey('public_key', 'perform encrypted classification');
+    this.requireClassifierSupport();
+    classifiers.validateModelShape({ weights });
+    const biases = options?.biases ?? weights.map(() => 0);
+    if (![...weights.flat(), ...biases].every(isInteger)) {
+      throw new Error(
+        'Weights and biases must be integers. Quantize them first.'
+      );
+    }
+    if (biases.length !== weights.length) {
+      throw new Error('There must be a bias for each class');
+    }
+    if (
+      !Array.isArray(encryptedFeatures) ||
+      encryptedFeatures.length !== weights[0].length ||
+      !encryptedFeatures.every((c) => c instanceof Ciphertext)
+    ) {
+      throw new Error(
+        `Encrypted features must be a list of ${weights[0].length} ciphertexts`
+      );
+    }
+    if (!Number.isInteger(bitLength) || bitLength < 1) {
+      throw new Error('Bit length must be a positive integer');
+    }
+
+    const output = await classifiers.evaluateHyperplane(
+      this.cs,
+      encryptedFeatures.map((c) => c.value as bigint),
+      weights.map((w) => w.map(BigInt)),
+      biases.map(BigInt),
+      bitLength,
+      client
+    );
+    return this.publicCiphertext(output);
+  }
+
+  /**
+   * Encrypts categorical features for naive bayes classification as one-hot
+   * vectors. Runs on client side. Only supported by
+   * Damgard-Geisler-Kroigaard.
+   *
+   * @param features - value of each feature in `[0, domain size)`.
+   * @param domainSizes - number of values of each feature, which the server
+   *   shares as a part of its model.
+   * @returns encrypted input, to be sent to the server.
+   */
+  encryptNaiveBayesInput(
+    features: readonly number[],
+    domainSizes: readonly number[]
+  ): Ciphertext[][] {
+    this.requireKey('public_key', 'perform encryption');
+    this.requireClassifierSupport();
+    if (
+      !Array.isArray(features) ||
+      !Array.isArray(domainSizes) ||
+      features.length === 0 ||
+      features.length !== domainSizes.length
+    ) {
+      throw new Error('There must be a domain size for each feature');
+    }
+    features.forEach((feature, j) => {
+      const size = domainSizes[j];
+      if (!Number.isInteger(size) || size < 1) {
+        throw new Error('Domain sizes must be positive integers');
+      }
+      if (!Number.isInteger(feature) || feature < 0 || feature >= size) {
+        throw new Error(
+          `Feature ${feature} must be an integer in [0, ${size})`
+        );
+      }
+    });
+
+    const encrypted = classifiers.encryptNaiveBayesInput(
+      this.cs,
+      features,
+      domainSizes
+    );
+    return encrypted.map((oneHot) =>
+      oneHot.map((c) => this.publicCiphertext(c))
+    );
+  }
+
+  /**
+   * Classifies encrypted categorical features with a private naive bayes
+   * model, i.e. finds the class of the greatest
+   * `log P(c) + sum of log P(x_j | c)`. Runs on server side and talks to the
+   * client (private key owner) through the client callable. Client learns
+   * only the predicted class, and server learns nothing. Only supported by
+   * Damgard-Geisler-Kroigaard.
+   *
+   * @param encryptedInput - output of {@link encryptNaiveBayesInput}.
+   * @param priors - P(c) of each class.
+   * @param likelihoods - `P(x_j = v | c)` for class c, feature j and value v,
+   *   i.e. `likelihoods[c][j][v]`. Probabilities must be positive, e.g.
+   *   smoothed with Laplace smoothing.
+   * @param client - sends a message to the client, and returns the output of
+   *   the client's {@link answerArgmax}.
+   * @param options.precision - number of decimal digits kept from log
+   *   probabilities. Default is 3. Greater values need more bits for scores.
+   * @returns encrypted index of the predicted class, to be decrypted by the
+   *   client. Earlier class is returned on ties.
+   */
+  async evaluateNaiveBayes(
+    encryptedInput: readonly (readonly Ciphertext[])[],
+    priors: readonly number[],
+    likelihoods: readonly (readonly (readonly number[])[])[],
+    client: ArgmaxClient,
+    options?: { precision?: number }
+  ): Promise<Ciphertext> {
+    const precision = options?.precision ?? 3;
+    this.requireKey('public_key', 'perform encrypted classification');
+    this.requireClassifierSupport();
+    classifiers.validateModelShape({ likelihoods });
+    if (!Array.isArray(priors) || priors.length !== likelihoods.length) {
+      throw new Error('There must be a prior for each class');
+    }
+    const domainSizes = likelihoods[0].map((values) => values.length);
+    if (
+      !Array.isArray(encryptedInput) ||
+      encryptedInput.length !== domainSizes.length ||
+      encryptedInput.some(
+        (oneHot, j) =>
+          !Array.isArray(oneHot) ||
+          oneHot.length !== domainSizes[j] ||
+          !oneHot.every((c) => c instanceof Ciphertext)
+      )
+    ) {
+      throw new Error(
+        `Encrypted input must be one-hot vectors of domain sizes [${domainSizes.join(', ')}]`
+      );
+    }
+    if (!Number.isInteger(precision) || precision < 0) {
+      throw new Error('Precision must be a non-negative integer');
+    }
+
+    const [quantizedPriors, quantizedLikelihoods, bitLength] =
+      classifiers.quantizeNaiveBayes(priors, likelihoods, precision);
+    const output = await classifiers.evaluateNaiveBayes(
+      this.cs,
+      encryptedInput.map((oneHot: readonly Ciphertext[]) =>
+        oneHot.map((c) => c.value as bigint)
+      ),
+      quantizedPriors,
+      quantizedLikelihoods,
+      bitLength,
+      client
+    );
+    return this.publicCiphertext(output);
+  }
+
+  /** Throws if the algorithm does not support encrypted classification. */
+  private requireClassifierSupport(): void {
+    if (this.algorithmName !== Algorithm.DamgardGeislerKroigaard) {
+      throw new Error(
+        `${this.algorithmName} does not support encrypted classification.` +
+          ' Use Damgard-Geisler-Kroigaard instead.'
+      );
+    }
+  }
+
+  /** Throws if the algorithm does not support encrypted nearest neighbor search. */
+  private requireKnnSupport(): void {
+    if (this.algorithmName !== Algorithm.DamgardGeislerKroigaard) {
+      throw new Error(
+        `${this.algorithmName} does not support encrypted nearest neighbor search.` +
+          ' Use Damgard-Geisler-Kroigaard instead.'
+      );
+    }
+  }
+
   /** Throws if the cryptosystem does not have the given key. */
   private requireKey(
     keyType: 'public_key' | 'private_key',
@@ -926,13 +2154,22 @@ export { Homomorphic } from './models/Homomorphic.js';
 export type {
   ArgmaxClient,
   ArgmaxMessage,
+  ChallengeResponseProof,
   CiphertextValue,
   DecisionTree,
   DecisionTreeServerState,
+  DecryptionProof,
   Keys,
   KeyPart,
+  KnowledgeProof,
+  MembershipProof,
   NumericDecisionTree,
+  OneHotProof,
+  PaillierKnowledgeProof,
+  PartialDecryption,
   RandomKey,
+  RandomnessProof,
+  RangeProof,
   RequiredKeys,
   VerifiableCiphertext,
 } from './models/types.js';
@@ -941,6 +2178,10 @@ export { validateKeys } from './commons/keyValidator.js';
 export { serializeKeys, deserializeKeys } from './commons/keySerializer.js';
 export * as pheUtils from './commons/pheUtils.js';
 export * as mathUtils from './commons/mathUtils.js';
+export * as zkp from './commons/zkp.js';
+export * as threshold from './commons/threshold.js';
+export * as secureAggregation from './commons/secureAggregation.js';
+export * as classifiers from './commons/classifiers.js';
 export {
   buildCryptosystem,
   REQUIRED_KEYS_BY_ALGORITHM,
@@ -967,12 +2208,18 @@ export {
   BrakerskiVaikuntanathan,
   FreemanBonehGohNissim,
   GentryHaleviVaikuntanathan,
+  LyubashevskyPeikertRegev,
+  MLKEM,
+  GentrySahaiWaters,
   FLOAT_NOT_SUPPORTED_MSG,
   REGEV_FLOAT_NOT_SUPPORTED_MSG,
   BV_FLOAT_NOT_SUPPORTED_MSG,
   FBGN_FLOAT_NOT_SUPPORTED_MSG,
   GHV_FLOAT_NOT_SUPPORTED_MSG,
   GHV_INSECURE_WARNING_MSG,
+  LPR_FLOAT_NOT_SUPPORTED_MSG,
+  MLKEM_FLOAT_NOT_SUPPORTED_MSG,
+  GSW_FLOAT_NOT_SUPPORTED_MSG,
   DECISION_TREE_OUTPUT_NOT_SUPPORTED_MSG,
   type ECPair,
   type BGNValue,
