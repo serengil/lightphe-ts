@@ -17,9 +17,12 @@ import { EllipticCurveElGamal } from './EllipticCurveElGamal.js';
 import { EllipticCurvePaillier } from './EllipticCurvePaillier.js';
 import { FreemanBonehGohNissim } from './FreemanBonehGohNissim.js';
 import { GentryHaleviVaikuntanathan } from './GentryHaleviVaikuntanathan.js';
+import { GentrySahaiWaters } from './GentrySahaiWaters.js';
 import { GoldwasserMicali } from './GoldwasserMicali.js';
 import { IshaiPaskin } from './IshaiPaskin.js';
 import { JoyeLibert } from './JoyeLibert.js';
+import { LyubashevskyPeikertRegev } from './LyubashevskyPeikertRegev.js';
+import { MLKEM } from './MLKEM.js';
 import { NaccacheStern } from './NaccacheStern.js';
 import { OkamotoUchiyama } from './OkamotoUchiyama.js';
 import { Paillier } from './Paillier.js';
@@ -66,6 +69,15 @@ export {
   GHV_FLOAT_NOT_SUPPORTED_MSG,
   GHV_INSECURE_WARNING_MSG,
 } from './GentryHaleviVaikuntanathan.js';
+export {
+  LyubashevskyPeikertRegev,
+  LPR_FLOAT_NOT_SUPPORTED_MSG,
+} from './LyubashevskyPeikertRegev.js';
+export { MLKEM, MLKEM_FLOAT_NOT_SUPPORTED_MSG } from './MLKEM.js';
+export {
+  GentrySahaiWaters,
+  GSW_FLOAT_NOT_SUPPORTED_MSG,
+} from './GentrySahaiWaters.js';
 
 /** Options accepted when building a cryptosystem. */
 export interface BuildOptions {
@@ -75,6 +87,8 @@ export interface BuildOptions {
   curve?: string | null;
   plaintextLimit?: number | bigint | null;
   maxTries?: number;
+  /** ElGamal and Exponential-ElGamal only. Picks g of a known prime order. */
+  primeOrder?: boolean;
 }
 
 /**
@@ -110,6 +124,9 @@ export const REQUIRED_KEYS_BY_ALGORITHM: Readonly<
   [Algorithm.FreemanBonehGohNissim]: FreemanBonehGohNissim.REQUIRED_KEYS,
   [Algorithm.GentryHaleviVaikuntanathan]:
     GentryHaleviVaikuntanathan.REQUIRED_KEYS,
+  [Algorithm.LyubashevskyPeikertRegev]: LyubashevskyPeikertRegev.REQUIRED_KEYS,
+  [Algorithm.MLKEM]: MLKEM.REQUIRED_KEYS,
+  [Algorithm.GentrySahaiWaters]: GentrySahaiWaters.REQUIRED_KEYS,
 };
 
 /**
@@ -122,16 +139,16 @@ export function buildCryptosystem(
   algorithmName: AlgorithmName | string,
   options: BuildOptions = {}
 ): Homomorphic {
-  const { keys, keySize, form, curve, plaintextLimit } = options;
+  const { keys, keySize, form, curve, plaintextLimit, primeOrder } = options;
   const maxTries = options.maxTries ?? 10000;
 
   switch (algorithmName) {
     case Algorithm.RSA:
       return new RSA({ keys, keySize, maxTries });
     case Algorithm.ElGamal:
-      return new ElGamal({ keys, keySize });
+      return new ElGamal({ keys, keySize, primeOrder });
     case Algorithm.ExponentialElGamal:
-      return new ElGamal({ keys, keySize, exponential: true });
+      return new ElGamal({ keys, keySize, exponential: true, primeOrder });
     case Algorithm.EllipticCurveElGamal:
       return new EllipticCurveElGamal({ keys, keySize, form, curve });
     case Algorithm.Paillier:
@@ -172,6 +189,12 @@ export function buildCryptosystem(
       return new FreemanBonehGohNissim({ keys, keySize, plaintextLimit });
     case Algorithm.GentryHaleviVaikuntanathan:
       return new GentryHaleviVaikuntanathan({ keys, keySize, plaintextLimit });
+    case Algorithm.LyubashevskyPeikertRegev:
+      return new LyubashevskyPeikertRegev({ keys, keySize, plaintextLimit });
+    case Algorithm.MLKEM:
+      return new MLKEM({ keys, keySize });
+    case Algorithm.GentrySahaiWaters:
+      return new GentrySahaiWaters({ keys, keySize });
     default:
       throw new Error(`unimplemented algorithm - ${algorithmName}`);
   }

@@ -42,6 +42,10 @@ const UNSUPPORTED_REASONS: Readonly<Record<string, string>> = {
     ' compute m - b mod p',
   [Algorithm.Regev]:
     'multiplying with uniformly random constants exceeds its noise budget',
+  [Algorithm.LyubashevskyPeikertRegev]:
+    'multiplying with uniformly random constants exceeds its noise budget',
+  [Algorithm.MLKEM]:
+    'it is homomorphic with respect to xor only, without addition',
   [Algorithm.GoldwasserMicali]:
     'it encrypts integers bit by bit and supports xor only,' +
     ' without multiplication with a constant',
@@ -49,6 +53,8 @@ const UNSUPPORTED_REASONS: Readonly<Record<string, string>> = {
   [Algorithm.BrakerskiVaikuntanathan]: NATIVE_MULTIPLICATION_REASON,
   [Algorithm.FreemanBonehGohNissim]: NATIVE_MULTIPLICATION_REASON,
   [Algorithm.GentryHaleviVaikuntanathan]: NATIVE_MULTIPLICATION_REASON,
+  [Algorithm.GentrySahaiWaters]:
+    'it already supports multiplications of bits natively',
 };
 
 /**
