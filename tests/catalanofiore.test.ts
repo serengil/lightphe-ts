@@ -200,12 +200,25 @@ describe('Catalano-Fiore', () => {
     ['EllipticCurve-ElGamal', 'discrete logarithm'],
     ['Okamoto-Uchiyama', 'plaintext modulus p is secret'],
     ['Regev', 'noise budget'],
+    ['Lyubashevsky-Peikert-Regev', 'noise budget'],
     ['Goldwasser-Micali', 'xor only'],
+    ['ML-KEM', 'xor only'],
+    ['Gentry-Sahai-Waters', 'multiplications of bits'],
     ['Boneh-Goh-Nissim', 'already supports one multiplication'],
     ['RSA', 'not additively homomorphic'],
     ['ElGamal', 'not additively homomorphic'],
   ])('does not support %s', (algorithmName, reason) => {
-    const keySize = algorithmName !== 'Regev' ? 64 : 16;
+    let keySize = ['Regev', 'Lyubashevsky-Peikert-Regev'].includes(
+      algorithmName
+    )
+      ? 16
+      : 64;
+    if (algorithmName === 'ML-KEM') {
+      keySize = 512;
+    }
+    if (algorithmName === 'Gentry-Sahai-Waters') {
+      keySize = 16;
+    }
     expect(
       () => new LightPHE({ algorithmName, keySize, boost: 'Catalano-Fiore' })
     ).toThrow(

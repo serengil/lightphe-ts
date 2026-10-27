@@ -5,7 +5,10 @@ import { buildCryptosystem } from '../cryptosystems/index.js';
 import { BV_FLOAT_NOT_SUPPORTED_MSG } from '../cryptosystems/BrakerskiVaikuntanathan.js';
 import { FBGN_FLOAT_NOT_SUPPORTED_MSG } from '../cryptosystems/FreemanBonehGohNissim.js';
 import { GHV_FLOAT_NOT_SUPPORTED_MSG } from '../cryptosystems/GentryHaleviVaikuntanathan.js';
+import { GSW_FLOAT_NOT_SUPPORTED_MSG } from '../cryptosystems/GentrySahaiWaters.js';
 import { FLOAT_NOT_SUPPORTED_MSG } from '../cryptosystems/JoyeLibert.js';
+import { LPR_FLOAT_NOT_SUPPORTED_MSG } from '../cryptosystems/LyubashevskyPeikertRegev.js';
+import { MLKEM_FLOAT_NOT_SUPPORTED_MSG } from '../cryptosystems/MLKEM.js';
 import { REGEV_FLOAT_NOT_SUPPORTED_MSG } from '../cryptosystems/Regev.js';
 import type { CurveForm } from '../ecc/index.js';
 import { Algorithm, type AlgorithmName } from './Algorithm.js';
@@ -19,6 +22,9 @@ export const FLOAT_NOT_SUPPORTED_MESSAGES: Readonly<Record<string, string>> = {
   [Algorithm.BrakerskiVaikuntanathan]: BV_FLOAT_NOT_SUPPORTED_MSG,
   [Algorithm.FreemanBonehGohNissim]: FBGN_FLOAT_NOT_SUPPORTED_MSG,
   [Algorithm.GentryHaleviVaikuntanathan]: GHV_FLOAT_NOT_SUPPORTED_MSG,
+  [Algorithm.LyubashevskyPeikertRegev]: LPR_FLOAT_NOT_SUPPORTED_MSG,
+  [Algorithm.MLKEM]: MLKEM_FLOAT_NOT_SUPPORTED_MSG,
+  [Algorithm.GentrySahaiWaters]: GSW_FLOAT_NOT_SUPPORTED_MSG,
 };
 
 export class Ciphertext {

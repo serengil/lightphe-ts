@@ -23,6 +23,9 @@ export const Algorithm = {
   BrakerskiVaikuntanathan: 'Brakerski-Vaikuntanathan',
   FreemanBonehGohNissim: 'Freeman-Boneh-Goh-Nissim',
   GentryHaleviVaikuntanathan: 'Gentry-Halevi-Vaikuntanathan',
+  LyubashevskyPeikertRegev: 'Lyubashevsky-Peikert-Regev',
+  MLKEM: 'ML-KEM',
+  GentrySahaiWaters: 'Gentry-Sahai-Waters',
 } as const;
 
 /** The name of any algorithm LightPHE can build a cryptosystem for. */
