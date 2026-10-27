@@ -117,3 +117,71 @@ export interface VerifiableCiphertext {
   /** Fiat-Shamir proof that the ciphertext contains the secret. */
   proof: { challenge: bigint; r: bigint; s: bigint; m: bigint };
 }
+
+/**
+ * A Chaum-Pedersen proof of equal discrete logarithms, or a Schnorr proof of
+ * knowledge of a discrete logarithm, made non-interactive with Fiat-Shamir.
+ */
+export interface ChallengeResponseProof {
+  challenge: bigint;
+  response: bigint;
+}
+
+/**
+ * A disjunctive proof that a ciphertext encrypts one of the allowed values,
+ * without revealing which one. Proofs of other values are simulated.
+ */
+export interface MembershipProof {
+  challenges: bigint[];
+  responses: bigint[];
+}
+
+/**
+ * Proof of correct decryption of Paillier and Damgard-Jurik: the randomness of
+ * the ciphertext, which reveals nothing about the private key.
+ */
+export interface RandomnessProof {
+  randomness: bigint;
+}
+
+/**
+ * Proof of knowledge of the plaintext and randomness of a Paillier or
+ * Damgard-Jurik ciphertext. Field names match the Python library.
+ */
+export interface PaillierKnowledgeProof {
+  challenge: bigint;
+  plaintext_response: bigint;
+  randomness_response: bigint;
+}
+
+/** Proof that a ciphertext encrypts a value in a range, built from its bits. */
+export interface RangeProof {
+  /** Encryption of the lower bound, and encryptions of the bits. */
+  ciphertexts: CiphertextValue[];
+  /** Proofs that the parts encrypt the lower bound, and 0 or 1. */
+  proofs: MembershipProof[];
+}
+
+/** Proof that encrypted slots are a one-hot vector. */
+export interface OneHotProof {
+  /** Proofs that each slot is 0 or 1. */
+  slots: MembershipProof[];
+  /** Proof that the slots sum to 1. */
+  sum: MembershipProof;
+}
+
+/** Proof of correct decryption: Chaum-Pedersen or randomness of the ciphertext. */
+export type DecryptionProof = ChallengeResponseProof | RandomnessProof;
+
+/** Proof that the encryptor of a ciphertext knows its plaintext. */
+export type KnowledgeProof = ChallengeResponseProof | PaillierKnowledgeProof;
+
+/** A partial decryption of a shareholder in threshold decryption. */
+export interface PartialDecryption {
+  /** Index of the shareholder in `[1, parties]`. */
+  index: number;
+  /** `c1^share` for ElGamal, a point for Elliptic Curve ElGamal, `c^share` for Paillier. */
+  value: bigint | [bigint, bigint];
+  /** Optional proof that the value is computed with the share of the shareholder. */
+  proof?: ChallengeResponseProof;
+}
