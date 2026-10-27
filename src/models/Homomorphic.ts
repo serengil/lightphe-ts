@@ -7,9 +7,13 @@ import type {
   CiphertextValue,
   DecisionTree,
   DecisionTreeServerState,
+  DecryptionProof,
   Keys,
   KeyPart,
+  KnowledgeProof,
+  MembershipProof,
   NumericDecisionTree,
+  PartialDecryption,
   RandomKey,
   RequiredKeys,
   VerifiableCiphertext,
@@ -256,6 +260,133 @@ export abstract class Homomorphic {
   ): bigint {
     throw new Error(
       `${this.getAlgorithmName()} does not support verifiable encryption`
+    );
+  }
+
+  /** Splits the private key into shares for threshold decryption. */
+  generateThresholdKeys(_threshold: number, _parties: number): Keys[] {
+    throw new Error(
+      `${this.getAlgorithmName()} does not support threshold decryption`
+    );
+  }
+
+  /** Decrypts a ciphertext partially with the share of a shareholder. */
+  partialDecrypt(
+    _ciphertext: CiphertextValue,
+    _prove?: boolean
+  ): PartialDecryption {
+    throw new Error(
+      `${this.getAlgorithmName()} does not support threshold decryption`
+    );
+  }
+
+  /** Restores plaintext from partial decryptions of threshold many shareholders. */
+  combinePartialDecryptions(
+    _ciphertext: CiphertextValue,
+    _partialDecryptions: readonly unknown[],
+    _verify?: boolean
+  ): bigint {
+    throw new Error(
+      `${this.getAlgorithmName()} does not support threshold decryption`
+    );
+  }
+
+  /** Verifies that a partial decryption is computed with its shareholder's share. */
+  verifyPartialDecryption(
+    _ciphertext: CiphertextValue,
+    _partialDecryption: unknown
+  ): boolean {
+    throw new Error(
+      `${this.getAlgorithmName()} does not support verifying partial decryptions`
+    );
+  }
+
+  /** Decrypts a ciphertext and proves that the decryption is correct. */
+  decryptWithProof(_ciphertext: CiphertextValue): [bigint, DecryptionProof] {
+    throw new Error(
+      `${this.getAlgorithmName()} does not support proofs of correct decryption`
+    );
+  }
+
+  /** Verifies that a ciphertext is decrypted to the given plaintext. */
+  verifyDecryption(
+    _ciphertext: CiphertextValue,
+    _plaintext: unknown,
+    _proof: unknown
+  ): boolean {
+    throw new Error(
+      `${this.getAlgorithmName()} does not support proofs of correct decryption`
+    );
+  }
+
+  /** Encrypts a plaintext and proves that it is one of the given values. */
+  encryptWithProof(
+    _plaintext: bigint,
+    _values: readonly bigint[],
+    _context?: unknown
+  ): [CiphertextValue, MembershipProof] {
+    throw new Error(
+      `${this.getAlgorithmName()} does not support proving that a ciphertext` +
+        ' encrypts one of given values'
+    );
+  }
+
+  /** Verifies that a ciphertext encrypts one of the given values. */
+  verifyCiphertext(
+    _ciphertext: CiphertextValue,
+    _proof: unknown,
+    _values: readonly bigint[],
+    _context?: unknown
+  ): boolean {
+    throw new Error(
+      `${this.getAlgorithmName()} does not support proving that a ciphertext` +
+        ' encrypts one of given values'
+    );
+  }
+
+  /**
+   * Proves that a ciphertext encrypts one of the given values, by the
+   * encryptor knowing its plaintext and random key.
+   */
+  proveMembership(
+    _ciphertext: CiphertextValue,
+    _plaintext: bigint,
+    _randomKey: RandomKey,
+    _values: readonly bigint[],
+    _context?: unknown
+  ): MembershipProof {
+    throw new Error(
+      `${this.getAlgorithmName()} does not support proving that a ciphertext` +
+        ' encrypts one of given values'
+    );
+  }
+
+  /** Random key of the homomorphic sum of ciphertexts of the given random keys. */
+  combineRandomKeys(_randomKeys: readonly RandomKey[]): RandomKey {
+    throw new Error(
+      `${this.getAlgorithmName()} does not support proving that a ciphertext` +
+        ' encrypts one of given values'
+    );
+  }
+
+  /** Encrypts a plaintext and proves that the encryptor knows it. */
+  encryptWithProofOfKnowledge(
+    _plaintext: bigint,
+    _context?: unknown
+  ): [CiphertextValue, KnowledgeProof] {
+    throw new Error(
+      `${this.getAlgorithmName()} does not support proofs of knowledge of plaintext`
+    );
+  }
+
+  /** Verifies that the encryptor of a ciphertext knows its plaintext. */
+  verifyKnowledge(
+    _ciphertext: CiphertextValue,
+    _proof: unknown,
+    _context?: unknown
+  ): boolean {
+    throw new Error(
+      `${this.getAlgorithmName()} does not support proofs of knowledge of plaintext`
     );
   }
 
