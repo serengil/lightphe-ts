@@ -1,7 +1,12 @@
 /** Shared helpers for the test suite. */
 
-import { EllipticCurvePoint, FP2 } from '../src';
-import type { CiphertextValue } from '../src';
+import {
+  EllipticCurvePoint,
+  FP2,
+  deserializeKeys,
+  serializeKeys,
+} from '../src';
+import type { CiphertextValue, Keys } from '../src';
 
 /**
  * Structural equality for ciphertext payloads.
@@ -68,4 +73,27 @@ export function randomBigInt(bound: bigint): bigint {
 /** Python-style modulo for bigints, always in `[0, m)`. */
 export function pmod(a: bigint, m: bigint): bigint {
   return ((a % m) + m) % m;
+}
+
+/**
+ * Sends a value through json and back, the way keys, proofs and partial
+ * decryptions travel over the wire. Bigints are written as decimal strings and
+ * restored as bigints, like Python's `json.loads(json.dumps(...))` keeps ints.
+ */
+export function jsonRoundTrip<T>(value: T): T {
+  return deserializeKeys(serializeKeys({ value } as unknown as Keys))
+    .value as T;
+}
+
+/** Adds 1 to the first entry of a proof, like a forger would. */
+export function tamper<T>(proof: T): T {
+  const tampered = deepClone(proof) as Record<string, unknown>;
+  const key = Object.keys(tampered)[0];
+  const value = tampered[key];
+  if (Array.isArray(value)) {
+    value[0] = (value[0] as bigint) + 1n;
+  } else {
+    tampered[key] = (value as bigint) + 1n;
+  }
+  return tampered as T;
 }

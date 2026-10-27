@@ -136,3 +136,20 @@ export function normalizeInput(
 
   throw new Error('Case constant float and negative not implemented yet');
 }
+
+/**
+ * Rounds a number to the nearest integer, and ties to the even one, as
+ * Python's `round` does. `Math.round` rounds ties up instead.
+ */
+export function roundHalfEven(value: number): bigint {
+  if (!Number.isFinite(value)) {
+    throw new Error(`cannot round a non-finite value (${value})`);
+  }
+  const floor = Math.floor(value);
+  const fraction = value - floor;
+  let rounded = floor;
+  if (fraction > 0.5 || (fraction === 0.5 && floor % 2 !== 0)) {
+    rounded = floor + 1;
+  }
+  return BigInt(rounded);
+}
