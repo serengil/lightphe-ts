@@ -1,6 +1,6 @@
 import * as crypto from 'crypto';
 
-import { sha256, sha256Text, shake128 } from '../src/commons/hashing';
+import { sha256, sha256Text, sha512, shake128 } from '../src/commons/hashing';
 
 describe('hashing', () => {
   it('matches SHA-256 of node', () => {
@@ -12,6 +12,14 @@ describe('hashing', () => {
     expect(Buffer.from(sha256Text('tag|1|2|çğ')).toString('hex')).toBe(
       crypto.createHash('sha256').update('tag|1|2|çğ', 'utf8').digest('hex')
     );
+  });
+
+  it('matches SHA-512 of node', () => {
+    for (const length of [0, 1, 111, 112, 127, 128, 129, 300, 1000]) {
+      const data = crypto.randomBytes(length);
+      const expected = crypto.createHash('sha512').update(data).digest();
+      expect(Buffer.from(sha512(new Uint8Array(data)))).toEqual(expected);
+    }
   });
 
   it('matches SHAKE-128 of node', () => {
