@@ -239,6 +239,63 @@ const c1Prime = cs.regenerateCiphertext(c1);
 console.assert(cs.decrypt(c1Prime) === cs.decrypt(c1));
 ```
 
+### Sending Ciphertexts over Network
+
+Ciphertexts, proofs and messages of interactive protocols can be serialized into json to be sent to another party. Keys are never serialized, the receiver restores ciphertexts with its own public key. `serialize` handles ciphertexts nested in arrays, plain objects and maps, e.g. a ciphertext with its proof, an encrypted update for secure aggregation, or a message sent to the `client` callable of encrypted argmax and nearest neighbor search. A `bigint` comes back as a `bigint` and a `number` as a `number`, and the json layout matches the Python library's.
+
+```typescript
+// client encrypts its value and sends it to the server
+const clientCs = new LightPHE({ algorithmName: 'Paillier' });
+const data = clientCs.serialize(clientCs.encrypt(17));
+
+// server restores the ciphertext with the client's public key only, and computes on it
+const serverCs = new LightPHE({
+  algorithmName: 'Paillier',
+  keys: { public_key: clientCs.cs.keys.public_key },
+});
+const c = serverCs.deserialize<Ciphertext>(data);
+const response = serverCs.serialize(c.add(serverCs.encrypt(25)));
+
+// client decrypts the response
+console.assert(
+  clientCs.decrypt(clientCs.deserialize<Ciphertext>(response)) === 42n
+);
+
+// a single ciphertext can be converted into a dict as well
+console.assert(
+  clientCs.decrypt(clientCs.fromDict<Ciphertext>(c.toDict())) === 17n
+);
+```
+
+To run an interactive protocol across machines, wrap the network call with the `client` callable:
+
+```typescript
+const client = async (message: ArgmaxMessage): Promise<bigint[]> => {
+  // e.g. an http request to the client, which answers with
+  // clientCs.serialize(clientCs.answerKnn(clientCs.deserialize(body)))
+  const response = await fetch(CLIENT_URL, {
+    method: 'POST',
+    body: serverCs.serialize(message),
+  });
+  return serverCs.deserialize<bigint[]>(await response.text());
+};
+
+const result = await serverCs.evaluateKnn(
+  encryptedQuery,
+  gallery,
+  2,
+  16,
+  client
+);
+```
+
+To send just the raw payload of a single ciphertext instead, use `.value` and rebuild it on the other side with `createCiphertextObj`:
+
+```typescript
+const payload = c.value; // the raw ciphertext
+const rebuilt = serverCs.createCiphertextObj(payload);
+```
+
 ### Elliptic Curve Cryptography
 
 ECC is a powerful public-key cryptosystem based on the algebraic structure of elliptic curves over finite fields. The library supports 3 elliptic curve forms (`weierstrass` (default), `edwards` and `koblitz`) and 140+ standard elliptic curve configurations, all bundled in — there is nothing extra to install.
@@ -1277,14 +1334,7 @@ const cs = new LightPHE({
 
 Keys are serialised as JSON with every big integer written as a decimal string, so a key file is portable and human-readable.
 
-### Sending a ciphertext over the wire
-
-A `Ciphertext` carries the public cryptosystem along with the payload. To send just the payload and rebuild it on the other side, use `.value` and `createCiphertextObj`:
-
-```typescript
-const payload = c1.value; // the raw ciphertext
-const rebuilt = cs.createCiphertextObj(payload);
-```
+To send ciphertexts and proofs to another party, see [Sending Ciphertexts over Network](#sending-ciphertexts-over-network).
 
 ## LightPHE Ecosystem
 

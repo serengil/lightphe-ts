@@ -15,12 +15,18 @@ import { mod, ONE, ZERO } from './commons/mathUtils.js';
 import * as nearestNeighbors from './commons/nearestNeighbors.js';
 import { fractionize, normalizeInput } from './commons/pheUtils.js';
 import * as secureAggregation from './commons/secureAggregation.js';
+import * as serialization from './commons/serialization.js';
 import * as thresholdUtils from './commons/threshold.js';
 import * as zkp from './commons/zkp.js';
 import { buildCryptosystem, type BuildOptions } from './cryptosystems/index.js';
 import { GSW_FLOAT_NOT_SUPPORTED_MSG } from './cryptosystems/GentrySahaiWaters.js';
 import { FLOAT_NOT_SUPPORTED_MSG } from './cryptosystems/JoyeLibert.js';
-import type { CurveForm, EllipticCurvePoint } from './ecc/index.js';
+import {
+  EllipticCurvePoint,
+  FP2,
+  type CurveForm,
+  type LightECC,
+} from './ecc/index.js';
 import { Algorithm, type AlgorithmName } from './models/Algorithm.js';
 import {
   CATALANO_FIORE,
@@ -63,6 +69,12 @@ const TENSOR_NOT_SUPPORTED_ALGORITHMS: readonly string[] = [
   Algorithm.GentryHaleviVaikuntanathan,
   Algorithm.LyubashevskyPeikertRegev,
   Algorithm.MLKEM,
+];
+
+/** Algorithms whose multiplied ciphertexts are elements of `F_{p^2}`. */
+const PAIRING_ALGORITHMS: readonly string[] = [
+  Algorithm.BonehGohNissim,
+  Algorithm.FreemanBonehGohNissim,
 ];
 
 /** Partial decryption of a fraction of an encrypted tensor. */
@@ -245,6 +257,9 @@ export class LightPHE<Boost extends string | null | undefined = undefined> {
 
   // Catalano-Fiore transform wraps a copy of this instance without the transform
   private readonly catalanoFiore: CatalanoFiore | null;
+
+  // Catalano-Fiore transform restoring deserialized ciphertexts, built on first use
+  private deserializationCatalanoFiore: CatalanoFiore | null = null;
 
   constructor(options: LightPHEOptions<Boost>) {
     this.algorithmName = options.algorithmName;
@@ -2039,6 +2054,177 @@ export class LightPHE<Boost extends string | null | undefined = undefined> {
   }
 
   /**
+   * Serializes ciphertexts, proofs or messages of interactive protocols into
+   * json to send them to another party. Keys are never serialized, receiver
+   * restores ciphertexts with its own keys.
+   *
+   * @param item - Ciphertext, CatalanoFioreCiphertext, EncryptedTensor, or
+   *   bigint, number, string, boolean, null, arrays, plain objects and maps of
+   *   them, e.g. outputs of encryptWithProof, encryptKnnQuery, encryptUpdate or
+   *   partialDecrypt, and messages sent to the client callable of
+   *   evaluateArgmax or evaluateKnn.
+   */
+  serialize(item: unknown): string {
+    return serialization.stringify(serialization.encode(item));
+  }
+
+  /**
+   * Restores ciphertexts, proofs or messages of interactive protocols
+   * serialized by another party. Ciphertexts are restored with the public key
+   * of this cryptosystem.
+   *
+   * @param data - output of {@link serialize}.
+   */
+  deserialize<T = unknown>(data: string): T {
+    let item: unknown;
+    try {
+      item = serialization.parse(data);
+    } catch {
+      throw new Error('Serialized data is not a valid json');
+    }
+    return this.fromDict<T>(item);
+  }
+
+  /**
+   * Restores ciphertexts from their dict forms created by `toDict`.
+   * Ciphertexts are restored with the public key of this cryptosystem.
+   *
+   * @param data - output of `toDict` of Ciphertext, CatalanoFioreCiphertext or
+   *   EncryptedTensor.
+   */
+  fromDict<T = unknown>(data: unknown): T {
+    return serialization.decode(data, (kind, fields) =>
+      this.restoreSerialized(kind, fields)
+    ) as T;
+  }
+
+  /** Builds a deserialized object with the keys of this cryptosystem. */
+  private restoreSerialized(
+    kind: string,
+    fields: Record<string, unknown>
+  ): unknown {
+    if (kind === serialization.POINT) {
+      const ec = (this.cs as { ec?: LightECC }).ec;
+      if (ec === undefined) {
+        throw new Error(
+          `${this.algorithmName} ciphertexts are not elliptic curve points`
+        );
+      }
+      const { x, y } = fields;
+      const identity = ec.curve.identity();
+      if (identity.infinity && x === Infinity && y === Infinity) {
+        return identity;
+      }
+      if (typeof x !== 'bigint' || typeof y !== 'bigint') {
+        throw new Error(
+          'Coordinates of an elliptic curve point must be integers'
+        );
+      }
+      try {
+        return EllipticCurvePoint.create(x, y, ec.curve);
+      } catch {
+        throw new Error('Serialized point is not on the curve');
+      }
+    }
+
+    const algorithmName =
+      kind === serialization.TENSOR
+        ? this.cs.getAlgorithmName()
+        : this.algorithmName;
+    if (fields.algorithm_name !== algorithmName) {
+      throw new Error(
+        `Serialized ${kind} belongs to ${String(fields.algorithm_name)},` +
+          ` but this cryptosystem is ${algorithmName}`
+      );
+    }
+
+    if (kind === serialization.CIPHERTEXT) {
+      return this.publicCiphertext(
+        this.restorePairingValue(fields.value as CiphertextValue)
+      );
+    }
+
+    if (kind === serialization.TENSOR) {
+      const fractions = (fields.fractions as Fraction[]).map(
+        (fraction) =>
+          new Fraction({
+            dividend: this.restorePairingValue(fraction.dividend),
+            absDividend: this.restorePairingValue(fraction.absDividend),
+            divisor: this.restorePairingValue(fraction.divisor),
+            sign: fraction.sign,
+          })
+      );
+      return new EncryptedTensor({
+        fractions,
+        // builds the public-key-only cryptosystem on first use
+        cs: this.publicCiphertext(ZERO).cs,
+        precision: fields.precision as number,
+      });
+    }
+
+    // Catalano-Fiore ciphertext
+    this.deserializationCatalanoFiore ??=
+      this.catalanoFiore ?? new CatalanoFiore(this.withoutBoost());
+    const cf = this.deserializationCatalanoFiore.public;
+    const { a, beta, alpha } = fields;
+    const pairs = fields.pairs as [unknown, unknown][];
+
+    if (alpha === null) {
+      if (typeof a !== 'bigint' || a < ZERO || a >= cf.plaintextModulo) {
+        throw new Error(
+          `a of a Catalano-Fiore ciphertext must be in [0, ${cf.plaintextModulo})`
+        );
+      }
+      if (!(beta instanceof Ciphertext) || pairs.length > 0) {
+        throw new Error(
+          'Non-multiplied Catalano-Fiore ciphertext must have a and beta only'
+        );
+      }
+      return new CatalanoFioreCiphertext({ cf, a, beta });
+    }
+
+    if (a !== null || beta !== null || !(alpha instanceof Ciphertext)) {
+      throw new Error(
+        'Multiplied Catalano-Fiore ciphertext must have alpha and pairs only'
+      );
+    }
+    if (pairs.some((pair) => pair.some((c) => !(c instanceof Ciphertext)))) {
+      throw new Error(
+        'Pairs of a Catalano-Fiore ciphertext must have ciphertexts'
+      );
+    }
+    return new CatalanoFioreCiphertext({
+      cf,
+      alpha,
+      pairs: pairs as [Ciphertext, Ciphertext][],
+    });
+  }
+
+  /**
+   * Elements of `F_{p^2}` in ciphertexts of pairing based algorithms are
+   * serialized as `(a, b)` pairs, as in Python. Restores them into `FP2`.
+   */
+  private restorePairingValue(value: CiphertextValue): CiphertextValue {
+    if (!PAIRING_ALGORITHMS.includes(this.algorithmName)) {
+      return value;
+    }
+    const restore = (content: CiphertextValue): CiphertextValue => {
+      if (!Array.isArray(content)) {
+        return content;
+      }
+      if (
+        content.length === 2 &&
+        typeof content[0] === 'bigint' &&
+        typeof content[1] === 'bigint'
+      ) {
+        return new FP2(content[0], content[1]);
+      }
+      return content.map(restore);
+    };
+    return restore(value);
+  }
+
+  /**
    * Wraps a raw ciphertext payload back into a `Ciphertext`, which carries the
    * keys needed to evaluate on it. Use this to rebuild a ciphertext received
    * over the wire.
@@ -2181,6 +2367,7 @@ export * as mathUtils from './commons/mathUtils.js';
 export * as zkp from './commons/zkp.js';
 export * as threshold from './commons/threshold.js';
 export * as secureAggregation from './commons/secureAggregation.js';
+export * as serialization from './commons/serialization.js';
 export * as classifiers from './commons/classifiers.js';
 export {
   buildCryptosystem,

@@ -2,6 +2,7 @@
 
 import { Logger } from '../commons/logger.js';
 import { fractionize, normalizeInput } from '../commons/pheUtils.js';
+import { encode } from '../commons/serialization.js';
 import { FLOAT_NOT_SUPPORTED_MSG } from '../cryptosystems/JoyeLibert.js';
 import { Algorithm, type AlgorithmName } from './Algorithm.js';
 import { Ciphertext } from './Ciphertext.js';
@@ -63,6 +64,15 @@ export class EncryptedTensor {
   /** The number of elements. */
   get length(): number {
     return this.fractions.length;
+  }
+
+  /**
+   * Converts the encrypted tensor into a json serializable form to send it to
+   * another party. Keys are not included, receiver restores it with
+   * `fromDict` of its LightPHE.
+   */
+  toDict(): Record<string, unknown> {
+    return encode(this) as Record<string, unknown>;
   }
 
   toString(): string {
