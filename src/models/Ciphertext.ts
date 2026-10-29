@@ -1,6 +1,7 @@
 /** An encrypted message together with the public cryptosystem that evaluates on it. */
 
 import { normalizeInput } from '../commons/pheUtils.js';
+import { encode } from '../commons/serialization.js';
 import { buildCryptosystem } from '../cryptosystems/index.js';
 import { BV_FLOAT_NOT_SUPPORTED_MSG } from '../cryptosystems/BrakerskiVaikuntanathan.js';
 import { FBGN_FLOAT_NOT_SUPPORTED_MSG } from '../cryptosystems/FreemanBonehGohNissim.js';
@@ -57,6 +58,15 @@ export class Ciphertext {
         form: options.form,
         curve: options.curve,
       });
+  }
+
+  /**
+   * Converts the ciphertext into a json serializable form to send it to
+   * another party. Keys are not included, receiver restores it with
+   * `fromDict` of its LightPHE.
+   */
+  toDict(): Record<string, unknown> {
+    return encode(this) as Record<string, unknown>;
   }
 
   toString(): string {

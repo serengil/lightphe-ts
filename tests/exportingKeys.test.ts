@@ -32,4 +32,19 @@ describe('exporting keys', () => {
 
     fs.rmSync(path.dirname(targetFile), { recursive: true, force: true });
   });
+
+  it('does not execute the content of a malicious key file', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lightphe-export-'));
+    const markerFile = path.join(dir, 'pwned.txt');
+    const keyFile = path.join(dir, 'malicious.lphe');
+    const payload = `require('fs').writeFileSync(${JSON.stringify(markerFile)}, 'pwned')`;
+    fs.writeFileSync(keyFile, payload, { encoding: 'utf-8' });
+
+    expect(() => new LightPHE({ algorithmName: 'RSA', keyFile })).toThrow();
+
+    expect(fs.existsSync(markerFile)).toBe(false);
+    logger.info('✅ key file content is not executed while restoring keys');
+
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
 });

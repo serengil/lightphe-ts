@@ -1,6 +1,7 @@
 /** Catalano-Fiore transform adding one multiplication to additive cryptosystems. */
 
 import { mod, randomBelow } from '../commons/mathUtils.js';
+import { encode } from '../commons/serialization.js';
 import type { CurveForm } from '../ecc/index.js';
 import { Algorithm } from './Algorithm.js';
 import { Ciphertext } from './Ciphertext.js';
@@ -235,6 +236,15 @@ export class CatalanoFioreCiphertext {
     this.alpha = options.alpha;
     this.pairs = options.pairs ?? [];
     this.isMultiplied = options.alpha !== undefined;
+  }
+
+  /**
+   * Converts the ciphertext into a json serializable form to send it to
+   * another party. Keys are not included, receiver restores it with
+   * `fromDict` of its LightPHE.
+   */
+  toDict(): Record<string, unknown> {
+    return encode(this) as Record<string, unknown>;
   }
 
   toString(): string {

@@ -15,7 +15,10 @@ import LightPHEDefault, {
   LightPHE,
   getDefaultCurve,
   listCurveNames,
+  type ArgmaxMessage,
+  type Ciphertext,
   type DecisionTree,
+  type EncryptedKnnQuery,
 } from '../src';
 
 describe('README examples', () => {
@@ -232,6 +235,66 @@ describe('README examples', () => {
     const rebuilt = cs.createCiphertextObj(payload);
 
     expect(cs.decrypt(rebuilt)).toBe(17n);
+  });
+
+  it('sends ciphertexts over network', async () => {
+    const clientCs = new LightPHE({ algorithmName: 'Paillier', keySize: 128 });
+    const data = clientCs.serialize(clientCs.encrypt(17));
+
+    const serverCs = new LightPHE({
+      algorithmName: 'Paillier',
+      keys: { public_key: clientCs.cs.keys.public_key },
+    });
+    const c = serverCs.deserialize<Ciphertext>(data);
+    const response = serverCs.serialize(c.add(serverCs.encrypt(25)));
+
+    expect(clientCs.decrypt(clientCs.deserialize<Ciphertext>(response))).toBe(
+      42n
+    );
+    expect(clientCs.decrypt(clientCs.fromDict<Ciphertext>(c.toDict()))).toBe(
+      17n
+    );
+
+    // the client callable of an interactive protocol, with the http request
+    // replaced by a direct call
+    const knnClientCs = new LightPHE({
+      algorithmName: 'Damgard-Geisler-Kroigaard',
+      keySize: 512,
+    });
+    const knnServerCs = new LightPHE({
+      algorithmName: 'Damgard-Geisler-Kroigaard',
+      keys: { public_key: knnClientCs.cs.keys.public_key },
+    });
+    const post = async (body: string): Promise<string> =>
+      knnClientCs.serialize(
+        knnClientCs.answerKnn(knnClientCs.deserialize<ArgmaxMessage>(body))
+      );
+    const client = async (message: ArgmaxMessage): Promise<bigint[]> => {
+      const text = await post(knnServerCs.serialize(message));
+      return knnServerCs.deserialize<bigint[]>(text);
+    };
+    const encryptedQuery = knnServerCs.deserialize<EncryptedKnnQuery>(
+      knnClientCs.serialize(knnClientCs.encryptKnnQuery([12, -7, 33, 5]))
+    );
+    const gallery = [
+      [10, -5, 30, 4],
+      [-40, 22, 1, 9],
+      [13, -8, 35, 6],
+    ];
+    const result = await knnServerCs.evaluateKnn(
+      encryptedQuery,
+      gallery,
+      2,
+      16,
+      client
+    );
+    expect(result.indices.map((i) => knnClientCs.decrypt(i)).join()).toBe(
+      '2,0'
+    );
+
+    const payload = c.value;
+    const rebuilt = serverCs.createCiphertextObj(payload);
+    expect(clientCs.decrypt(rebuilt)).toBe(17n);
   });
 
   it('runs the encrypted argmax walkthrough', async () => {
